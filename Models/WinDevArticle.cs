@@ -18,7 +18,7 @@ namespace DynamicsToXmlTranslator.Models
     }
 
     /// <summary>
-    /// Structure d'un article dans le format WINDEV
+    /// Structure d'un article dans le format WINDEV - Version simplifiée pour tests
     /// </summary>
     public class WinDevArticle
     {
@@ -28,14 +28,19 @@ namespace DynamicsToXmlTranslator.Models
         [XmlElement("ART_CODE")]
         public string ArtCode { get; set; }
 
-        [XmlElement("TIE_CODE")]
-        public string TieCode { get; set; }
-
+        // Commenté temporairement car le champ n'existe pas encore dans le JSON
+        /*
         [XmlElement("ART_DESC")]
         public string ArtDesc { get; set; }
+        */
 
         [XmlElement("ART_DESL")]
         public string ArtDesl { get; set; }
+
+        // Commenté pour la phase de test - à décommenter plus tard si nécessaire
+        /*
+        [XmlElement("TIE_CODE")]
+        public string TieCode { get; set; }
 
         [XmlElement("ART_EANU")]
         public string ArtEanu { get; set; }
@@ -108,5 +113,6 @@ namespace DynamicsToXmlTranslator.Models
 
         [XmlElement("ART_ALPHA19")]
         public string ArtAlpha19 { get; set; }
+        */
     }
 }

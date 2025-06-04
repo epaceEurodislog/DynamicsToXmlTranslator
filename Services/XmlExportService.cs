@@ -35,9 +35,9 @@ namespace DynamicsToXmlTranslator.Services
         }
 
         /// <summary>
-        /// Exporte une liste d'articles WINDEV en fichier XML
+        /// Exporte une liste d'articles WINDEV en fichier XML - Version test simplifiée
         /// </summary>
-        public async Task<string> ExportToXmlAsync(List<WinDevArticle> articles, string fileNamePrefix = "ARTICLE_GSCF")
+        public async Task<string> ExportToXmlAsync(List<WinDevArticle> articles, string fileNamePrefix = "ARTICLE_GSCF_TEST")
         {
             if (articles == null || !articles.Any())
             {
@@ -49,7 +49,7 @@ namespace DynamicsToXmlTranslator.Services
             {
                 // Générer le nom du fichier avec timestamp
                 string timestamp = DateTime.Now.ToString("dd-MM-yyyy_HHHmmMss", CultureInfo.InvariantCulture);
-                string fileName = $"{fileNamePrefix}_{timestamp}_FICHIER TRAITE.XML";
+                string fileName = $"{fileNamePrefix}_{timestamp}_FICHIER_TRAITE.XML";
                 string filePath = Path.Combine(_exportDirectory, fileName);
 
                 // Créer l'objet racine
@@ -79,9 +79,6 @@ namespace DynamicsToXmlTranslator.Services
                     serializer.Serialize(writer, winDevTable, namespaces);
                 }
 
-                // Post-traitement pour formater les nombres décimaux
-                await PostProcessXmlFile(filePath);
-
                 _logger.LogInformation($"Export XML réussi : {fileName} ({articles.Count} articles)");
                 return filePath;
             }
@@ -89,29 +86,6 @@ namespace DynamicsToXmlTranslator.Services
             {
                 _logger.LogError(ex, "Erreur lors de l'export XML");
                 throw;
-            }
-        }
-
-        /// <summary>
-        /// Post-traite le fichier XML pour formater les nombres décimaux
-        /// </summary>
-        private async Task PostProcessXmlFile(string filePath)
-        {
-            try
-            {
-                // Lire le fichier
-                string xmlContent = await File.ReadAllTextAsync(filePath, Encoding.GetEncoding("ISO-8859-1"));
-
-                // Remplacer les virgules par des points pour les décimaux
-                xmlContent = xmlContent.Replace("<ART_PRIX>", "<ART_PRIX>")
-                                     .Replace(",", ".");
-
-                // Réécrire le fichier
-                await File.WriteAllTextAsync(filePath, xmlContent, Encoding.GetEncoding("ISO-8859-1"));
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Erreur lors du post-traitement du fichier XML");
             }
         }
 
@@ -147,7 +121,7 @@ namespace DynamicsToXmlTranslator.Services
 
                     _logger.LogInformation($"Export du lot {batchNumber}/{batches.Count} ({batch.Count} articles)");
 
-                    string fileNamePrefix = $"{_configuration["XmlExport:FileNamePrefix"] ?? "ARTICLE_GSCF"}_LOT{batchNumber:D3}";
+                    string fileNamePrefix = $"{_configuration["XmlExport:FileNamePrefix"] ?? "ARTICLE_GSCF_TEST"}_LOT{batchNumber:D3}";
                     string filePath = await ExportToXmlAsync(batch, fileNamePrefix);
 
                     if (!string.IsNullOrEmpty(filePath))
@@ -166,7 +140,7 @@ namespace DynamicsToXmlTranslator.Services
         }
 
         /// <summary>
-        /// Génère un fichier XML de test avec des données d'exemple
+        /// Génère un fichier XML de test avec des données d'exemple - Version simplifiée
         /// </summary>
         public async Task<string> GenerateTestXmlAsync()
         {
@@ -174,39 +148,28 @@ namespace DynamicsToXmlTranslator.Services
             {
                 new WinDevArticle
                 {
-                    ActCode = "GSCF",
+                    ActCode = "BR",
                     ArtCode = "TEST001",
-                    TieCode = "1040",
-                    ArtDesc = "ARTICLE TEST",
-                    ArtDesl = "Article de test pour validation du format",
-                    ArtEanu = "1234567890123",
-                    ArtEanc = "",
-                    ArtQtec = 1,
-                    ArtQtep = 100,
-                    ArtStat = 4,
-                    ArtNval = 0,
-                    ArtAlpha2 = "COLIS",
-                    ArtDdlc = 1,
-                    ArtAlpha8 = "TEST001",
-                    ArtAlpha9 = "KGM",
-                    ArtPoiu = 1000,
-                    ArtPrix = 10.50m,
-                    ArtAlpha14 = "SEC",
-                    ArtUni = 1,
-                    ArtNum19 = 365,
-                    ArtNum21 = 0,
-                    ArtAlpha18 = "1510@0@@@@",
-                    ArtAlpha15 = "",
-                    ArtTpve = 0,
-                    ArtTpvs = 0,
-                    ArtAlpha26 = "LTRF",
-                    ArtAlpha25 = "",
-                    ArtTop18 = 0,
-                    ArtAlpha19 = ""
+                    // ArtDesc = "ARTICLE TEST 1",  // Commenté car champ non disponible
+                    ArtDesl = "DISP001" // Simule DisplayProductNumber
+                },
+                new WinDevArticle
+                {
+                    ActCode = "BR",
+                    ArtCode = "TEST002",
+                    // ArtDesc = "ARTICLE TEST 2",  // Commenté car champ non disponible
+                    ArtDesl = "DISP002" // Simule DisplayProductNumber
+                },
+                new WinDevArticle
+                {
+                    ActCode = "BR",
+                    ArtCode = "TEST003",
+                    // ArtDesc = "ARTICLE TEST 3",  // Commenté car champ non disponible
+                    ArtDesl = "DISP003" // Simule DisplayProductNumber
                 }
             };
 
-            return await ExportToXmlAsync(testArticles, "ARTICLE_TEST");
+            return await ExportToXmlAsync(testArticles, "ARTICLE_TEST_SIMPLE");
         }
     }
 }

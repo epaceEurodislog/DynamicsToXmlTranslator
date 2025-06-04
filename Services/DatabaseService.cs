@@ -49,8 +49,12 @@ namespace DynamicsToXmlTranslator.Services
                             SELECT 
                                 id,
                                 json_data,
+                                content_hash,
+                                api_endpoint,
                                 item_id,
-                                last_updated_at
+                                first_seen_at,
+                                last_updated_at,
+                                update_count
                             FROM articles_raw
                             ORDER BY item_id";
 
@@ -62,10 +66,14 @@ namespace DynamicsToXmlTranslator.Services
                                 {
                                     var article = new Article
                                     {
-                                        Id = reader.GetInt32(0),
-                                        JsonData = reader.GetString(1),
-                                        ItemId = reader.IsDBNull(2) ? null : reader.GetString(2),
-                                        LastUpdatedAt = reader.GetDateTime(3)
+                                        Id = reader.GetInt32(0),                                    // id
+                                        JsonData = reader.GetString(1),                            // json_data
+                                        ContentHash = reader.GetString(2),                         // content_hash
+                                        ApiEndpoint = reader.IsDBNull(3) ? null : reader.GetString(3), // api_endpoint
+                                        ItemId = reader.IsDBNull(4) ? null : reader.GetString(4),     // item_id
+                                        FirstSeenAt = reader.GetDateTime(5),                       // first_seen_at
+                                        LastUpdatedAt = reader.GetDateTime(6),                     // last_updated_at
+                                        UpdateCount = reader.GetInt32(7)                           // update_count
                                     };
 
                                     // Désérialiser le JSON Dynamics
@@ -115,8 +123,12 @@ namespace DynamicsToXmlTranslator.Services
                             SELECT 
                                 id,
                                 json_data,
+                                content_hash,
+                                api_endpoint,
                                 item_id,
-                                last_updated_at
+                                first_seen_at,
+                                last_updated_at,
+                                update_count
                             FROM articles_raw
                             WHERE last_updated_at >= @sinceDate
                             ORDER BY item_id";
@@ -131,10 +143,14 @@ namespace DynamicsToXmlTranslator.Services
                                 {
                                     var article = new Article
                                     {
-                                        Id = reader.GetInt32(0),
-                                        JsonData = reader.GetString(1),
-                                        ItemId = reader.IsDBNull(2) ? null : reader.GetString(2),
-                                        LastUpdatedAt = reader.GetDateTime(3)
+                                        Id = reader.GetInt32(0),                                    // id
+                                        JsonData = reader.GetString(1),                            // json_data
+                                        ContentHash = reader.GetString(2),                         // content_hash
+                                        ApiEndpoint = reader.IsDBNull(3) ? null : reader.GetString(3), // api_endpoint
+                                        ItemId = reader.IsDBNull(4) ? null : reader.GetString(4),     // item_id
+                                        FirstSeenAt = reader.GetDateTime(5),                       // first_seen_at
+                                        LastUpdatedAt = reader.GetDateTime(6),                     // last_updated_at
+                                        UpdateCount = reader.GetInt32(7)                           // update_count
                                     };
 
                                     // Désérialiser le JSON Dynamics
@@ -168,7 +184,7 @@ namespace DynamicsToXmlTranslator.Services
         /// <summary>
         /// Enregistre le log d'export
         /// </summary>
-        public virtual async Task LogExportAsync(string fileName, int articlesCount, string status, string message = null)
+        public virtual async Task LogExportAsync(string fileName, int articlesCount, string status, string? message = null)
         {
             try
             {
