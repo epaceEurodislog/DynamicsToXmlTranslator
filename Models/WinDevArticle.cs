@@ -18,101 +18,109 @@ namespace DynamicsToXmlTranslator.Models
     }
 
     /// <summary>
-    /// Structure d'un article dans le format WINDEV - Version simplifiée pour tests
+    /// Structure simplifiée d'un article WINDEV - Uniquement les champs mappés avec l'API
     /// </summary>
     public class WinDevArticle
     {
+        // ========== IDENTIFIANTS PRINCIPAUX ==========
         [XmlElement("ACT_CODE")]
-        public string ActCode { get; set; }
+        public string ActCode { get; set; } = ""; // dataAreaId (ex: "br")
 
         [XmlElement("ART_CODE")]
-        public string ArtCode { get; set; }
-
-        // Commenté temporairement car le champ n'existe pas encore dans le JSON
-        /*
-        [XmlElement("ART_DESC")]
-        public string ArtDesc { get; set; }
-        */
+        public string ArtCode { get; set; } = ""; // ItemId (ex: "SHSEBO500")
 
         [XmlElement("ART_DESL")]
-        public string ArtDesl { get; set; }
+        public string ArtDesl { get; set; } = ""; // Name (description longue)
 
-        // Commenté pour la phase de test - à décommenter plus tard si nécessaire
-        /*
-        [XmlElement("TIE_CODE")]
-        public string TieCode { get; set; }
-
+        // ========== CODE-BARRES ==========
         [XmlElement("ART_EANU")]
-        public string ArtEanu { get; set; }
+        public string ArtEanu { get; set; } = ""; // itemBarCode (EAN unité)
 
-        [XmlElement("ART_EANC")]
-        public string ArtEanc { get; set; }
-
-        [XmlElement("ART_QTEC")]
-        public int ArtQtec { get; set; }
-
-        [XmlElement("ART_QTEP")]
-        public int ArtQtep { get; set; }
-
-        [XmlElement("ART_STAT")]
-        public int ArtStat { get; set; }
-
-        [XmlElement("ART_NVAL")]
-        public int ArtNval { get; set; }
-
-        [XmlElement("ART_ALPHA2")]
-        public string ArtAlpha2 { get; set; }
-
-        [XmlElement("ART_DDLC")]
-        public int ArtDdlc { get; set; }
-
-        [XmlElement("ART_ALPHA8")]
-        public string ArtAlpha8 { get; set; }
-
-        [XmlElement("ART_ALPHA9")]
-        public string ArtAlpha9 { get; set; }
-
+        // ========== POIDS ET DIMENSIONS ==========
         [XmlElement("ART_POIU")]
-        public int ArtPoiu { get; set; }
+        public decimal ArtPoiu { get; set; } = 0; // GrossWeight (poids brut)
 
-        [XmlElement("ART_PRIX")]
-        public decimal ArtPrix { get; set; }
+        [XmlElement("ART_POIN")]
+        public decimal ArtPoin { get; set; } = 0; // Weight (poids net)
 
-        [XmlElement("ART_ALPHA14")]
-        public string ArtAlpha14 { get; set; }
+        [XmlElement("ART_HAUT")]
+        public decimal ArtHaut { get; set; } = 0; // Height
 
-        [XmlElement("ART_UNI")]
-        public int ArtUni { get; set; }
+        [XmlElement("ART_LARG")]
+        public decimal ArtLarg { get; set; } = 0; // Width
 
-        [XmlElement("ART_NUM19")]
-        public int ArtNum19 { get; set; }
+        [XmlElement("ART_PROF")]
+        public decimal ArtProf { get; set; } = 0; // Depth
 
-        [XmlElement("ART_NUM21")]
-        public int ArtNum21 { get; set; }
+        [XmlElement("ART_HAUTB")]
+        public decimal ArtHautb { get; set; } = 0; // grossHeight
 
-        [XmlElement("ART_ALPHA18")]
-        public string ArtAlpha18 { get; set; }
+        [XmlElement("ART_LARGB")]
+        public decimal ArtLargb { get; set; } = 0; // grossWidth
 
-        [XmlElement("ART_ALPHA15")]
-        public string ArtAlpha15 { get; set; }
+        [XmlElement("ART_PROFB")]
+        public decimal ArtProfb { get; set; } = 0; // grossDepth
 
-        [XmlElement("ART_TPVE")]
-        public int ArtTpve { get; set; }
+        // ========== FACTEURS DE CONDITIONNEMENT ==========
+        [XmlElement("ART_COLI")]
+        public int ArtColi { get; set; } = 0; // FactorColli
 
-        [XmlElement("ART_TPVS")]
-        public int ArtTpvs { get; set; }
+        [XmlElement("ART_PAL")]
+        public int ArtPal { get; set; } = 0; // FactorPallet
 
-        [XmlElement("ART_ALPHA26")]
-        public string ArtAlpha26 { get; set; }
+        // ========== UNITÉ ==========
+        [XmlElement("ART_UNITE")]
+        public string ArtUnite { get; set; } = ""; // UnitId
 
-        [XmlElement("ART_ALPHA25")]
-        public string ArtAlpha25 { get; set; }
+        // ========== GROUPES ET CATÉGORIES ==========
+        [XmlElement("ART_GROUPE")]
+        public string ArtGroupe { get; set; } = ""; // ItemGroupId
 
-        [XmlElement("ART_TOP18")]
-        public int ArtTop18 { get; set; }
+        [XmlElement("ART_CATEG")]
+        public string ArtCateg { get; set; } = ""; // Category
 
-        [XmlElement("ART_ALPHA19")]
-        public string ArtAlpha19 { get; set; }
-        */
+        // ========== STATUTS ET INDICATEURS ==========
+        [XmlElement("ART_STAT3PL")]
+        public string ArtStat3pl { get; set; } = ""; // INT3PLStatus
+
+        [XmlElement("ART_HMIM")]
+        public int ArtHmim { get; set; } = 0; // HMIMIndicator
+
+        [XmlElement("ART_LIFECYCLE")]
+        public string ArtLifecycle { get; set; } = ""; // ProductLifecycleStateId
+
+        [XmlElement("ART_VERSION")]
+        public string ArtVersion { get; set; } = ""; // ProducVersionAttribute
+
+        // ========== DURÉE DE VIE ==========
+        [XmlElement("ART_DDLC")]
+        public int ArtDdlc { get; set; } = 0; // PdsShelfLife (en minutes)
+
+        // ========== SUIVI ET TRAÇABILITÉ ==========
+        [XmlElement("ART_LOT1")]
+        public int ArtLot1 { get; set; } = 0; // TrackingLot1
+
+        [XmlElement("ART_LOT2")]
+        public int ArtLot2 { get; set; } = 0; // TrackingLot2
+
+        [XmlElement("ART_DLUO")]
+        public int ArtDluo { get; set; } = 0; // TrackingDLCDDLUO
+
+        [XmlElement("ART_PROOF")]
+        public int ArtProof { get; set; } = 0; // TrackingProoftag
+
+        // ========== RÉFÉRENCES EXTERNES ==========
+        [XmlElement("ART_EXTID")]
+        public string ArtExtid { get; set; } = ""; // ExternalItemId
+
+        [XmlElement("ART_INTRASTAT")]
+        public string ArtIntrastat { get; set; } = ""; // IntrastatCommodity
+
+        [XmlElement("ART_ORIGINE")]
+        public string ArtOrigine { get; set; } = ""; // OrigCountryRegionId
+
+        // ========== VOLUME CALCULÉ ==========
+        [XmlElement("ART_VOLUME")]
+        public decimal ArtVolume { get; set; } = 0; // Calculé : Height × Width × Depth
     }
 }

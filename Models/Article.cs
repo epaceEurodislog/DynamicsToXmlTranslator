@@ -19,29 +19,54 @@ namespace DynamicsToXmlTranslator.Models
     }
 
     /// <summary>
-    /// Structure des données Dynamics (correspond au JSON de l'API)
+    /// Structure des données Dynamics (correspond au nouveau JSON de l'API)
     /// </summary>
     public class DynamicsArticle
     {
+        // Propriétés principales
         public string? ItemId { get; set; }
-        public string? ItemName { get; set; }
-        public string? ItemDescription { get; set; }
-        public string? DisplayProductNumber { get; set; }  // Ajout pour ART_DESL
-        public string? BarcodeNumber { get; set; }
-        public string? ItemGroupId { get; set; }
-        public string? ProductTypeId { get; set; }
-        public string? SalesUnitSymbol { get; set; }
-        public decimal NetWeight { get; set; }
-        public decimal GrossWeight { get; set; }
-        public string? VendorAccountNumber { get; set; }
-        public string? VendorItemNumber { get; set; }
-        public decimal SalesPrice { get; set; }
-        public string? ItemDimensionGroupId { get; set; }
-        public string? StorageDimensionGroupId { get; set; }
-        public string? TrackingDimensionGroupId { get; set; }
-        public int ShelfLifePeriodDays { get; set; }
-        public string? DataAreaId { get; set; }
+        public string? Name { get; set; }  // Remplace ItemName
+        public string? Category { get; set; }  // Nouveau champ
+        public string? ExternalItemId { get; set; }  // Nouveau champ
 
-        // Ajoutez d'autres propriétés selon vos besoins
+        // Propriétés de poids et dimensions
+        public decimal GrossWeight { get; set; }
+        public decimal Weight { get; set; }  // Poids net
+        public decimal Height { get; set; }
+        public decimal Width { get; set; }
+        public decimal Depth { get; set; }
+        public decimal grossHeight { get; set; }  // Dimensions brutes
+        public decimal grossWidth { get; set; }
+        public decimal grossDepth { get; set; }
+
+        // Code-barres et identification
+        public string? itemBarCode { get; set; }  // Remplace BarcodeNumber
+        public string? ItemGroupId { get; set; }
+        public string? UnitId { get; set; }  // Remplace SalesUnitSymbol
+
+        // Propriétés de suivi et statut
+        public string? INT3PLStatus { get; set; }  // Nouveau champ
+        public int TrackingLot1 { get; set; }  // Nouveau champ
+        public int TrackingLot2 { get; set; }  // Nouveau champ
+        public int TrackingProoftag { get; set; }  // Nouveau champ
+        public int TrackingDLCDDLUO { get; set; }  // Nouveau champ
+
+        // Durée de vie et cycle produit
+        public int PdsShelfLife { get; set; }  // Remplace ShelfLifePeriodDays
+        public string? ProductLifecycleStateId { get; set; }  // Nouveau champ
+        public string? ProducVersionAttribute { get; set; }  // Nouveau champ
+
+        // Facteurs et quantités
+        public int FactorColli { get; set; }  // Nouveau champ
+        public int FactorPallet { get; set; }  // Nouveau champ
+
+        // Informations réglementaires
+        public string? IntrastatCommodity { get; set; }  // Nouveau champ
+        public string? OrigCountryRegionId { get; set; }  // Nouveau champ
+        public int HMIMIndicator { get; set; }  // Nouveau champ
+
+        // Zone de données
+        public string? dataAreaId { get; set; }  // Remplace DataAreaId
+
     }
 }
