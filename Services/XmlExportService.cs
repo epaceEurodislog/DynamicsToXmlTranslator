@@ -37,7 +37,7 @@ namespace DynamicsToXmlTranslator.Services
         /// <summary>
         /// Exporte une liste d'articles WINDEV en fichier XML
         /// </summary>
-        public async Task<string> ExportToXmlAsync(List<WinDevArticle> articles, string fileNamePrefix = "ARTICLE_WINDEV")
+        public async Task<string?> ExportToXmlAsync(List<WinDevArticle> articles, string fileNamePrefix = "ARTICLE_WINDEV")
         {
             if (articles == null || !articles.Any())
             {
@@ -140,84 +140,13 @@ namespace DynamicsToXmlTranslator.Services
         }
 
         /// <summary>
-        /// Génère un fichier XML de test avec l'exemple SHSEBO500 réel
+        /// Génère un fichier XML de test vide (plus d'articles de test nécessaires)
         /// </summary>
-        public async Task<string> GenerateTestXmlAsync()
+        public async Task<string?> GenerateTestXmlAsync()
         {
-            var testArticles = new List<WinDevArticle>
-            {
-                // Article basé sur l'exemple SHSEBO500 fourni
-                new WinDevArticle
-                {
-                    ActCode = "BR", // dataAreaId: "br"
-                    ArtCode = "SHSEBO500", // ItemId
-                    ArtDesl = "SHAMPOOING TRAITANT SEBO-REEQUILIBRANT 500 ml", // Name
-                    ArtEanu = "3700693203036", // itemBarCode
-                    ArtPoiu = 566, // GrossWeight
-                    ArtPoin = 0, // Weight
-                    ArtHaut = 0, // Height
-                    ArtLarg = 0, // Width
-                    ArtProf = 0, // Depth
-                    ArtHautb = 0, // grossHeight
-                    ArtLargb = 0, // grossWidth
-                    ArtProfb = 0, // grossDepth
-                    ArtColi = 20, // FactorColli
-                    ArtPal = 1000, // FactorPallet
-                    ArtUnite = "U", // UnitId
-                    ArtGroupe = "PF", // ItemGroupId
-                    ArtCateg = "", // Category (vide dans l'exemple)
-                    ArtStat3pl = "None", // INT3PLStatus
-                    ArtHmim = 0, // HMIMIndicator
-                    ArtLifecycle = "Non", // ProductLifecycleStateId
-                    ArtVersion = "No", // ProducVersionAttribute
-                    ArtDdlc = 1440, // PdsShelfLife
-                    ArtLot1 = 1, // TrackingLot1
-                    ArtLot2 = 0, // TrackingLot2
-                    ArtDluo = 1, // TrackingDLCDDLUO
-                    ArtProof = 1, // TrackingProoftag
-                    ArtExtid = "", // ExternalItemId (vide)
-                    ArtIntrastat = "", // IntrastatCommodity (vide)
-                    ArtOrigine = "FRA", // OrigCountryRegionId
-                    ArtVolume = 0 // Calculé (dimensions nulles)
-                },
-                
-                // Article de test supplémentaire
-                new WinDevArticle
-                {
-                    ActCode = "BR",
-                    ArtCode = "TEST001",
-                    ArtDesl = "ARTICLE TEST AVEC DIMENSIONS",
-                    ArtEanu = "1234567890123",
-                    ArtPoiu = 250,
-                    ArtPoin = 200,
-                    ArtHaut = 10,
-                    ArtLarg = 5,
-                    ArtProf = 3,
-                    ArtHautb = 12,
-                    ArtLargb = 6,
-                    ArtProfb = 4,
-                    ArtColi = 12,
-                    ArtPal = 144,
-                    ArtUnite = "PCE",
-                    ArtGroupe = "TEST",
-                    ArtCateg = "Produit Test",
-                    ArtStat3pl = "Active",
-                    ArtHmim = 0,
-                    ArtLifecycle = "Actif",
-                    ArtVersion = "V1",
-                    ArtDdlc = 720,
-                    ArtLot1 = 1,
-                    ArtLot2 = 1,
-                    ArtDluo = 1,
-                    ArtProof = 0,
-                    ArtExtid = "EXT001",
-                    ArtIntrastat = "12345678",
-                    ArtOrigine = "FRA",
-                    ArtVolume = 150 // 10×5×3
-                }
-            };
+            var testArticles = new List<WinDevArticle>();
 
-            return await ExportToXmlAsync(testArticles, "ARTICLE_TEST_API_MAPPING");
+            return await ExportToXmlAsync(testArticles, "ARTICLE_TEST_VIDE");
         }
 
         /// <summary>
@@ -227,22 +156,24 @@ namespace DynamicsToXmlTranslator.Services
         {
             try
             {
-                _logger.LogInformation("=== TEST MAPPING API → WINDEV ===");
+                _logger.LogInformation("=== TEST MAPPING API → SPEED (selon Excel) ===");
 
                 var dynamicsArticle = Newtonsoft.Json.JsonConvert.DeserializeObject<DynamicsArticle>(jsonData);
 
-                _logger.LogInformation("Données API reçues:");
-                _logger.LogInformation($"  ItemId: '{dynamicsArticle?.ItemId}' → ART_CODE");
-                _logger.LogInformation($"  Name: '{dynamicsArticle?.Name}' → ART_DESL");
-                _logger.LogInformation($"  dataAreaId: '{dynamicsArticle?.dataAreaId}' → ACT_CODE");
-                _logger.LogInformation($"  itemBarCode: '{dynamicsArticle?.itemBarCode}' → ART_EANU");
-                _logger.LogInformation($"  GrossWeight: {dynamicsArticle?.GrossWeight}g → ART_POIU");
-                _logger.LogInformation($"  FactorColli: {dynamicsArticle?.FactorColli} → ART_COLI");
-                _logger.LogInformation($"  FactorPallet: {dynamicsArticle?.FactorPallet} → ART_PAL");
-                _logger.LogInformation($"  Category: '{dynamicsArticle?.Category}' → ART_CATEG");
-                _logger.LogInformation($"  ItemGroupId: '{dynamicsArticle?.ItemGroupId}' → ART_GROUPE");
+                _logger.LogInformation("Données API reçues → Champs SPEED:");
+                _logger.LogInformation($"  dataAreaId: '{dynamicsArticle?.dataAreaId}' → ART_CCLI");
+                _logger.LogInformation($"  ItemId: '{dynamicsArticle?.ItemId}' → ART_PAR.ART_CODC");
+                _logger.LogInformation($"  Name: '{dynamicsArticle?.Name}' → ART_PAR.ART_DESL");
+                _logger.LogInformation($"  UnitId: '{dynamicsArticle?.UnitId}' → ART_PAR.ART_ALPHA2");
+                _logger.LogInformation($"  itemBarCode: '{dynamicsArticle?.itemBarCode}' → ART_PAR.ART_EANU");
+                _logger.LogInformation($"  Category: '{dynamicsArticle?.Category}' → ART.ALPHA17");
+                _logger.LogInformation($"  OrigCountryRegionId: '{dynamicsArticle?.OrigCountryRegionId}' → ART.ALPHA3");
+                _logger.LogInformation($"  GrossWeight: {dynamicsArticle?.GrossWeight}g → ART_PAR.ART_POIU");
+                _logger.LogInformation($"  FactorColli: {dynamicsArticle?.FactorColli} → ART_PAR.ART_QTEC");
+                _logger.LogInformation($"  FactorPallet: {dynamicsArticle?.FactorPallet} → ART_PAR.ART_QTEP");
+                _logger.LogInformation($"  ACT_CODE: 'COSMETIQUE' (fixe)");
 
-                _logger.LogInformation("Mapping réussi !");
+                _logger.LogInformation("Mapping selon Excel réussi !");
             }
             catch (Exception ex)
             {
