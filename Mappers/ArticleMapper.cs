@@ -36,39 +36,37 @@ namespace DynamicsToXmlTranslator.Mappers
                     // ========== IDENTIFIANTS PRINCIPAUX ==========
                     ActCode = "COSMETIQUE", // Fixe pour tous les articles
                     ArtCcli = dynamics.dataAreaId?.ToUpper() ?? "BR", // dataAreaId → ART_CCLI (code client/activité)
-                    ArtCode = dynamics.ItemId ?? "", // ItemId → ART_PAR.ART_CODC
+                    ArtCode = "BR" + (dynamics.ItemId ?? ""), // "BR" + ItemId → ART_CODE (format: BRSHSEBO500)
+                    ArtCodc = dynamics.ItemId ?? "", // ItemId → ART_PAR.ART_CODC
                     ArtDesl = dynamics.Name ?? "", // Name → ART_PAR.ART_DESL
 
                     // ========== UNITÉ ET CODE-BARRES ==========
-                    ArtAlpha2 = dynamics.UnitId ?? "", // UnitId → ART_PAR.ART_ALPHA2
+                    ArtAlpha2 = !string.IsNullOrEmpty(dynamics.UnitId) ? dynamics.UnitId : "UNITE", // RG11: UNITE par défaut
                     ArtEanu = dynamics.itemBarCode ?? "", // itemBarCode → ART_PAR.ART_EANU
 
                     // ========== CATÉGORIES ET GROUPES ==========
-                    Alpha17 = dynamics.Category ?? "", // Category → ART.ALPHA17
-                    Alpha3 = dynamics.OrigCountryRegionId ?? "", // OrigCountryRegionId → ART.ALPHA3
+                    ArtAlpha17 = dynamics.Category ?? "", // Category → ART.ALPHA17
+                    ArtAlpha3 = dynamics.OrigCountryRegionId ?? "", // OrigCountryRegionId → ART.ALPHA3
 
                     // ========== STATUT ET POIDS ==========
-                    ArtStat = ConvertProductLifecycleState(dynamics.ProductLifecycleStateId).ToString(), // ProductLifecycleStateId → ART_PAR.ART_STAT
+                    ArtStat = ConvertProductLifecycleState(dynamics.ProductLifecycleStateId), // RG21: Si 'Non' alors "2" sinon "3"
                     ArtPoiu = dynamics.GrossWeight, // GrossWeight → ART_PAR.ART_POIU
 
                     // ========== CONDITIONNEMENT ==========
                     ArtQtec = dynamics.FactorColli, // FactorColli → ART_PAR.ART_QTEC
-                    ArtQtep = dynamics.FactorPallet, // FactorPallet → ART_PAR.ART_QTEP
+                    ArtQtep = dynamics.FactorPallet == 0 ? 0 : dynamics.FactorPallet, // RG8: Si Gestion VL Palette = 0 alors vide
 
                     // ========== DURÉE DE VIE ==========
-                    ArtNum19 = dynamics.PdsShelfLife, // PdsShelfLife → ART_PAR.ART_NUM19
+                    ArtNum19 = dynamics.PdsShelfLife > 0 ? dynamics.PdsShelfLife : 1620, // RG10: 1620 par défaut si non géré
 
                     // ========== IDENTIFIANTS EXTERNES ==========
-                    ArtAlpha8 = dynamics.ExternalItemId ?? "", // ExternalItemId → ART_PAR.ART_ALPHA8
+                    ArtAlpha8 = !string.IsNullOrEmpty(dynamics.ExternalItemId) ? dynamics.ExternalItemId : dynamics.ItemId ?? "", // RG12: Code article par défaut
 
                     // ========== TRAÇABILITÉ ==========
                     ArtDluo = dynamics.TrackingDLCDDLUO, // TrackingDLCDDLUO → ART_PAR.ART_DLUO
                     ArtLot1 = dynamics.TrackingLot1, // TrackingLot1 → ART_PAR.ART_LOT1
                     ArtLot2 = dynamics.TrackingLot2, // TrackingLot2 → ART_PAR.ART_LOT2
-                    ArtNss = dynamics.TrackingProoftag, // TrackingProoftag → ART_PAR.ART_NSS
-
-                    // ========== RÉTIQUETAGE (SUPPRIMÉ) ==========
-                    // TOP1 retiré sur demande
+                    ArtNss = dynamics.TrackingProoftag > 0 ? 1 : 0, // RG18: Si gestion des prooftag valeur 1 sinon 0
 
                     // ========== DIMENSIONS BRUTES ==========
                     ArtLonu = dynamics.grossDepth, // grossDepth → ART_PAR.ART_LONU
@@ -84,18 +82,18 @@ namespace DynamicsToXmlTranslator.Mappers
                     ArtHauc = dynamics.Height, // Height → ART_PAR.ART_HAUC
                     ArtPoic = dynamics.Weight, // Weight → ART_PAR.ART_POIC
 
-                    // ========== CHAMPS NON MAPPÉS (valeurs par défaut) ==========
-                    ArtAlpha14 = "SEC", //Si null, par défaut "SEC"
-                    ArtRstk = "",
-                    ArtUni = 0,
-                    ArtSpcb = 0, // CORRIGÉ: maintenant numérique
-                    ArtColi = 0,
-                    ArtPal = 0,
-                    ArtNum18 = 0,
-                    ArtAlpha18 = "",
-                    ArtAlpha24 = "300@500", // Si null, par défaut "300@500" vérifié avec Hary ou JM
-                    ArtAlpha26 = "",
-                    ArtNse = 0, // CORRIGÉ: maintenant numérique
+                    // ========== CHAMPS AVEC VALEURS PAR DÉFAUT (RG) ==========
+                    ArtAlpha14 = "SEC", // RG2: SEC par défaut
+                    ArtRstk = "00002", // RG3: 00002 par défaut
+                    ArtUni = 1, // RG4: 1 par défaut
+                    ArtSpcb = "0", // RG5: 0 par défaut
+                    ArtColi = 1, // RG6: 1 par défaut
+                    ArtPal = 0, // RG7: 0 par défaut
+                    ArtNum18 = 1, // RG9: 1 par défaut
+                    ArtAlpha18 = "1510@0@@@@", // RG13: 1510@0@@@@ par défaut
+                    ArtAlpha24 = "500@300", // RG14: 500@300 par défaut (corrigé depuis votre "300@500")
+                    ArtAlpha26 = "BR", // RG15: BR par défaut
+                    ArtNse = "0", // RG17: 0 par défaut
                     ArtEanc = ""
                 };
 
@@ -110,36 +108,19 @@ namespace DynamicsToXmlTranslator.Mappers
         }
 
         /// <summary>
-        /// Convertit ProductLifecycleStateId en code numérique de statut
-        /// Logique : "NON"/"NO" = 2, tout le reste = 1
+        /// Convertit ProductLifecycleStateId en code selon RG21
+        /// Logique : "Non" = "2", tout le reste = "3"
         /// </summary>
-        private int ConvertProductLifecycleState(string? lifecycleState)
+        private string ConvertProductLifecycleState(string? lifecycleState)
         {
             if (string.IsNullOrEmpty(lifecycleState))
-                return 1; // Valeur par défaut pour champ vide
+                return "3"; // Valeur par défaut pour champ vide
 
-            // Logique spécifique demandée
+            // RG21: Si 'Non' alors 2 sinon 3
             return lifecycleState.ToUpper().Trim() switch
             {
-                "NON" or "NO" => 2, // Cas spécifique NON/NO
-                _ => 3 // Tout le reste
-            };
-        }
-
-        /// <summary>
-        /// Convertit ProducVersionAttribute en entier pour TOP1
-        /// </summary>
-        private int ConvertVersionAttributeToInt(string? versionAttribute)
-        {
-            if (string.IsNullOrEmpty(versionAttribute))
-                return 0;
-
-            // Logique de conversion selon vos besoins
-            return versionAttribute.ToUpper() switch
-            {
-                "YES" or "OUI" or "Y" or "O" => 1,
-                "NO" or "NON" or "N" => 0,
-                _ => int.TryParse(versionAttribute, out var result) ? result : 0
+                "NON" or "NO" => "2", // Cas spécifique NON/NO
+                _ => "3" // Tout le reste
             };
         }
 
@@ -179,21 +160,23 @@ namespace DynamicsToXmlTranslator.Mappers
 
             var dynamics = article.DynamicsData;
 
-            return $"=== MAPPING ARTICLE (selon Excel) ===\n" +
+            return $"=== MAPPING ARTICLE (selon Excel + RG) ===\n" +
                    $"API → SPEED:\n" +
                    $"  dataAreaId: '{dynamics.dataAreaId}' → ART_CCLI (code client)\n" +
                    $"  ItemId: '{dynamics.ItemId}' → ART_PAR.ART_CODC\n" +
+                   $"  ART_CODE: 'BR{dynamics.ItemId}' (format BR + ItemId)\n" +
                    $"  Name: '{dynamics.Name}' → ART_PAR.ART_DESL\n" +
-                   $"  UnitId: '{dynamics.UnitId}' → ART_PAR.ART_ALPHA2\n" +
+                   $"  UnitId: '{dynamics.UnitId}' → ART_PAR.ART_ALPHA2 (RG11: UNITE si vide)\n" +
                    $"  itemBarCode: '{dynamics.itemBarCode}' → ART_PAR.ART_EANU\n" +
                    $"  Category: '{dynamics.Category}' → ART.ALPHA17\n" +
                    $"  OrigCountryRegionId: '{dynamics.OrigCountryRegionId}' → ART.ALPHA3\n" +
                    $"  GrossWeight: {dynamics.GrossWeight}g → ART_PAR.ART_POIU\n" +
                    $"  FactorColli: {dynamics.FactorColli} → ART_PAR.ART_QTEC\n" +
-                   $"  FactorPallet: {dynamics.FactorPallet} → ART_PAR.ART_QTEP\n" +
-                   $"  PdsShelfLife: {dynamics.PdsShelfLife} → ART_PAR.ART_NUM19\n" +
+                   $"  FactorPallet: {dynamics.FactorPallet} → ART_PAR.ART_QTEP (RG8)\n" +
+                   $"  PdsShelfLife: {dynamics.PdsShelfLife} → ART_PAR.ART_NUM19 (RG10: 1620 si vide)\n" +
                    $"  ACT_CODE: 'COSMETIQUE' (fixe)\n" +
-                   $"  Suivi: L1={dynamics.TrackingLot1}, L2={dynamics.TrackingLot2}, DLUO={dynamics.TrackingDLCDDLUO}";
+                   $"  Suivi: L1={dynamics.TrackingLot1}, L2={dynamics.TrackingLot2}, DLUO={dynamics.TrackingDLCDDLUO}\n" +
+                   $"  Prooftag: {dynamics.TrackingProoftag} → ART_NSS (RG18: 1 si >0, sinon 0)";
         }
     }
 }

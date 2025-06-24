@@ -30,7 +30,10 @@ namespace DynamicsToXmlTranslator.Models
         public string ArtCcli { get; set; } = ""; // dataAreaId → ART_CCLI (code client/activité)
 
         [XmlElement("ART_CODE")]
-        public string ArtCode { get; set; } = ""; // ItemId → ART_PAR.ART_CODE
+        public string ArtCode { get; set; } = ""; // "BR" + ItemId → ART_CODE (format: BRSHSEBO500)
+
+        [XmlElement("ART_CODC")]
+        public string ArtCodc { get; set; } = ""; // ItemId → ART_PAR.ART_CODC
 
         [XmlElement("ART_DESL")]
         public string ArtDesl { get; set; } = ""; // Name → ART_PAR.ART_DESL
@@ -44,10 +47,10 @@ namespace DynamicsToXmlTranslator.Models
 
         // ========== CATÉGORIES ET GROUPES ==========
         [XmlElement("ART_ALPHA17")]
-        public string Alpha17 { get; set; } = ""; // Category → ART.ALPHA17
+        public string ArtAlpha17 { get; set; } = ""; // Category → ART.ALPHA17
 
         [XmlElement("ART_ALPHA3")]
-        public string Alpha3 { get; set; } = ""; // OrigCountryRegionId → ART.ALPHA3
+        public string ArtAlpha3 { get; set; } = ""; // OrigCountryRegionId → ART.ALPHA3
 
         // ========== STATUT ET POIDS ==========
         [XmlElement("ART_STAT")]
@@ -83,10 +86,6 @@ namespace DynamicsToXmlTranslator.Models
 
         [XmlElement("ART_NSS")]
         public int ArtNss { get; set; } = 0; // TrackingProoftag → ART_PAR.ART_NSS
-
-        // ========== RÉTIQUETAGE ==========
-        //[XmlElement("TOP1")]
-        //public int Top1 { get; set; } = 0; // ProducVersionAttribute → ART.TOP1
 
         // ========== DIMENSIONS BRUTES ==========
         [XmlElement("ART_LONU")]
@@ -126,7 +125,7 @@ namespace DynamicsToXmlTranslator.Models
         public int ArtUni { get; set; } = 0;
 
         [XmlElement("ART_SPCB")]
-        public int ArtSpcb { get; set; } = 0; // CORRIGÉ: int au lieu de string
+        public string ArtSpcb { get; set; } = ""; // Retour en string selon vos RG
 
         [XmlElement("ART_COLI")]
         public int ArtColi { get; set; } = 0;
@@ -147,7 +146,7 @@ namespace DynamicsToXmlTranslator.Models
         public string ArtAlpha26 { get; set; } = "";
 
         [XmlElement("ART_NSE")]
-        public int ArtNse { get; set; } = 0; // CORRIGÉ: int au lieu de string
+        public string ArtNse { get; set; } = ""; // Retour en string selon vos RG
 
         [XmlElement("ART_EANC")]
         public string ArtEanc { get; set; } = "";
