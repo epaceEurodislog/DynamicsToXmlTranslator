@@ -36,7 +36,7 @@ namespace DynamicsToXmlTranslator.Mappers
                     // ========== IDENTIFIANTS PRINCIPAUX ==========
                     ActCode = "COSMETIQUE", // Fixe pour tous les articles
                     ArtCcli = dynamics.dataAreaId?.ToUpper() ?? "BR", // dataAreaId → ART_CCLI (code client/activité)
-                    ArtCodc = dynamics.ItemId ?? "", // ItemId → ART_PAR.ART_CODC
+                    ArtCode = dynamics.ItemId ?? "", // ItemId → ART_PAR.ART_CODC
                     ArtDesl = dynamics.Name ?? "", // Name → ART_PAR.ART_DESL
 
                     // ========== UNITÉ ET CODE-BARRES ==========
@@ -48,7 +48,7 @@ namespace DynamicsToXmlTranslator.Mappers
                     Alpha3 = dynamics.OrigCountryRegionId ?? "", // OrigCountryRegionId → ART.ALPHA3
 
                     // ========== STATUT ET POIDS ==========
-                    ArtStat = dynamics.ProductLifecycleStateId ?? "", // ProductLifecycleStateId → ART_PAR.ART_STAT
+                    ArtStat = ConvertProductLifecycleState(dynamics.ProductLifecycleStateId).ToString(), // ProductLifecycleStateId → ART_PAR.ART_STAT
                     ArtPoiu = dynamics.GrossWeight, // GrossWeight → ART_PAR.ART_POIU
 
                     // ========== CONDITIONNEMENT ==========
@@ -67,8 +67,8 @@ namespace DynamicsToXmlTranslator.Mappers
                     ArtLot2 = dynamics.TrackingLot2, // TrackingLot2 → ART_PAR.ART_LOT2
                     ArtNss = dynamics.TrackingProoftag, // TrackingProoftag → ART_PAR.ART_NSS
 
-                    // ========== RÉTIQUETAGE ==========
-                    Top1 = ConvertVersionAttributeToInt(dynamics.ProducVersionAttribute), // ProducVersionAttribute → ART.TOP1
+                    // ========== RÉTIQUETAGE (SUPPRIMÉ) ==========
+                    // TOP1 retiré sur demande
 
                     // ========== DIMENSIONS BRUTES ==========
                     ArtLonu = dynamics.grossDepth, // grossDepth → ART_PAR.ART_LONU
@@ -85,21 +85,21 @@ namespace DynamicsToXmlTranslator.Mappers
                     ArtPoic = dynamics.Weight, // Weight → ART_PAR.ART_POIC
 
                     // ========== CHAMPS NON MAPPÉS (valeurs par défaut) ==========
-                    ArtAlpha14 = "",
+                    ArtAlpha14 = "SEC", //Si null, par défaut "SEC"
                     ArtRstk = "",
                     ArtUni = 0,
-                    ArtSpcb = "",
+                    ArtSpcb = 0, // CORRIGÉ: maintenant numérique
                     ArtColi = 0,
                     ArtPal = 0,
                     ArtNum18 = 0,
                     ArtAlpha18 = "",
-                    ArtAlpha24 = "",
+                    ArtAlpha24 = "300@500", // Si null, par défaut "300@500" vérifié avec Hary ou JM
                     ArtAlpha26 = "",
-                    ArtNse = "",
+                    ArtNse = 0, // CORRIGÉ: maintenant numérique
                     ArtEanc = ""
                 };
 
-                _logger.LogDebug($"Article mappé: {dynamics.ItemId} → Code: {winDev.ArtCodc}, ACT: {winDev.ActCode}");
+                _logger.LogDebug($"Article mappé: {dynamics.ItemId} → Code: {winDev.ArtCode}, ACT: {winDev.ActCode}");
                 return winDev;
             }
             catch (Exception ex)
@@ -107,6 +107,23 @@ namespace DynamicsToXmlTranslator.Mappers
                 _logger.LogError(ex, $"Erreur lors du mapping de l'article {article.ItemId}");
                 return null;
             }
+        }
+
+        /// <summary>
+        /// Convertit ProductLifecycleStateId en code numérique de statut
+        /// Logique : "NON"/"NO" = 2, tout le reste = 1
+        /// </summary>
+        private int ConvertProductLifecycleState(string? lifecycleState)
+        {
+            if (string.IsNullOrEmpty(lifecycleState))
+                return 1; // Valeur par défaut pour champ vide
+
+            // Logique spécifique demandée
+            return lifecycleState.ToUpper().Trim() switch
+            {
+                "NON" or "NO" => 2, // Cas spécifique NON/NO
+                _ => 3 // Tout le reste
+            };
         }
 
         /// <summary>

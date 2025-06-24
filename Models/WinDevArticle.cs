@@ -29,8 +29,8 @@ namespace DynamicsToXmlTranslator.Models
         [XmlElement("ART_CCLI")]
         public string ArtCcli { get; set; } = ""; // dataAreaId → ART_CCLI (code client/activité)
 
-        [XmlElement("ART_CODC")]
-        public string ArtCodc { get; set; } = ""; // ItemId → ART_PAR.ART_CODC
+        [XmlElement("ART_CODE")]
+        public string ArtCode { get; set; } = ""; // ItemId → ART_PAR.ART_CODE
 
         [XmlElement("ART_DESL")]
         public string ArtDesl { get; set; } = ""; // Name → ART_PAR.ART_DESL
@@ -43,10 +43,10 @@ namespace DynamicsToXmlTranslator.Models
         public string ArtEanu { get; set; } = ""; // itemBarCode → ART_PAR.ART_EANU
 
         // ========== CATÉGORIES ET GROUPES ==========
-        [XmlElement("ALPHA17")]
+        [XmlElement("ART_ALPHA17")]
         public string Alpha17 { get; set; } = ""; // Category → ART.ALPHA17
 
-        [XmlElement("ALPHA3")]
+        [XmlElement("ART_ALPHA3")]
         public string Alpha3 { get; set; } = ""; // OrigCountryRegionId → ART.ALPHA3
 
         // ========== STATUT ET POIDS ==========
@@ -85,8 +85,8 @@ namespace DynamicsToXmlTranslator.Models
         public int ArtNss { get; set; } = 0; // TrackingProoftag → ART_PAR.ART_NSS
 
         // ========== RÉTIQUETAGE ==========
-        [XmlElement("TOP1")]
-        public int Top1 { get; set; } = 0; // ProducVersionAttribute → ART.TOP1
+        //[XmlElement("TOP1")]
+        //public int Top1 { get; set; } = 0; // ProducVersionAttribute → ART.TOP1
 
         // ========== DIMENSIONS BRUTES ==========
         [XmlElement("ART_LONU")]
@@ -126,7 +126,7 @@ namespace DynamicsToXmlTranslator.Models
         public int ArtUni { get; set; } = 0;
 
         [XmlElement("ART_SPCB")]
-        public string ArtSpcb { get; set; } = "";
+        public int ArtSpcb { get; set; } = 0; // CORRIGÉ: int au lieu de string
 
         [XmlElement("ART_COLI")]
         public int ArtColi { get; set; } = 0;
@@ -147,7 +147,7 @@ namespace DynamicsToXmlTranslator.Models
         public string ArtAlpha26 { get; set; } = "";
 
         [XmlElement("ART_NSE")]
-        public string ArtNse { get; set; } = "";
+        public int ArtNse { get; set; } = 0; // CORRIGÉ: int au lieu de string
 
         [XmlElement("ART_EANC")]
         public string ArtEanc { get; set; } = "";
