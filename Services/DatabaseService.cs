@@ -261,5 +261,122 @@ namespace DynamicsToXmlTranslator.Services
                 throw;
             }
         }
+
+        /// <summary>
+        /// Récupère uniquement les articles non exportés en XML
+        /// </summary>
+        public async Task<List<Article>> GetNonExportedArticlesAsync()
+        {
+            var articles = new List<Article>();
+
+            try
+            {
+                using (var connection = new MySqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+
+                    using (var command = connection.CreateCommand())
+                    {
+                        command.CommandText = @"
+                            SELECT 
+                                id,
+                                json_data,
+                                content_hash,
+                                api_endpoint,
+                                item_id,
+                                first_seen_at,
+                                last_updated_at,
+                                update_count
+                            FROM articles_raw
+                            WHERE xml_exported = FALSE OR xml_exported IS NULL
+                            ORDER BY item_id";
+
+                        using (var reader = await command.ExecuteReaderAsync())
+                        {
+                            while (await reader.ReadAsync())
+                            {
+                                try
+                                {
+                                    var article = new Article
+                                    {
+                                        Id = reader.GetInt32(0),                                    // id
+                                        JsonData = reader.GetString(1),                            // json_data
+                                        ContentHash = reader.GetString(2),                         // content_hash
+                                        ApiEndpoint = reader.IsDBNull(3) ? null : reader.GetString(3), // api_endpoint
+                                        ItemId = reader.IsDBNull(4) ? null : reader.GetString(4),     // item_id
+                                        FirstSeenAt = reader.GetDateTime(5),                       // first_seen_at
+                                        LastUpdatedAt = reader.GetDateTime(6),                     // last_updated_at
+                                        UpdateCount = reader.GetInt32(7)                           // update_count
+                                    };
+
+                                    // Désérialiser le JSON Dynamics
+                                    if (!string.IsNullOrEmpty(article.JsonData))
+                                    {
+                                        article.DynamicsData = JsonConvert.DeserializeObject<DynamicsArticle>(article.JsonData);
+                                    }
+
+                                    articles.Add(article);
+                                }
+                                catch (Exception ex)
+                                {
+                                    _logger.LogError(ex, $"Erreur lors de la lecture de l'article ID: {reader.GetInt32(0)}");
+                                }
+                            }
+                        }
+                    }
+                }
+
+                _logger.LogInformation($"{articles.Count} articles non exportés récupérés");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erreur lors de la récupération des articles non exportés");
+                throw;
+            }
+
+            return articles;
+        }
+
+        /// <summary>
+        /// Marque les articles comme exportés en XML
+        /// </summary>
+        public async Task MarkArticlesAsExportedAsync(List<int> articleIds, string batchName)
+        {
+            if (articleIds == null || !articleIds.Any())
+            {
+                return;
+            }
+
+            try
+            {
+                using (var connection = new MySqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+
+                    using (var command = connection.CreateCommand())
+                    {
+                        var inClause = string.Join(",", articleIds.Select(id => id.ToString()));
+
+                        command.CommandText = $@"
+                            UPDATE articles_raw 
+                            SET 
+                                xml_exported = TRUE,
+                                xml_export_date = NOW(),
+                                xml_export_batch = @batchName
+                            WHERE id IN ({inClause})";
+
+                        command.Parameters.AddWithValue("@batchName", batchName ?? "");
+
+                        var updatedRows = await command.ExecuteNonQueryAsync();
+                        _logger.LogInformation($"{updatedRows} articles marqués comme exportés");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erreur lors du marquage des articles comme exportés");
+                throw;
+            }
+        }
     }
 }

@@ -45,6 +45,7 @@ namespace DynamicsToXmlTranslator
                     Console.WriteLine("3. Exporter les articles modifiés depuis une date");
                     Console.WriteLine("4. Générer un fichier XML de test");
                     Console.WriteLine("5. Afficher les statistiques");
+                    Console.WriteLine("6. Exporter UNIQUEMENT les nouveaux articles");
                     Console.WriteLine("0. Quitter");
                     Console.Write("\nVotre choix : ");
 
@@ -66,6 +67,9 @@ namespace DynamicsToXmlTranslator
                             break;
                         case "5":
                             await ShowStatistics();
+                            break;
+                        case "6":
+                            await ExportNewArticlesOnly();
                             break;
                         case "0":
                             continuer = false;
@@ -115,7 +119,7 @@ namespace DynamicsToXmlTranslator
             });
 
             _databaseService = new DatabaseService(_configuration, loggerFactory.CreateLogger<DatabaseService>());
-            _xmlExportService = new XmlExportService(_configuration, loggerFactory.CreateLogger<XmlExportService>());
+            _xmlExportService = new XmlExportService(_configuration, loggerFactory.CreateLogger<XmlExportService>(), _databaseService);
             _articleMapper = new ArticleMapper(_configuration, loggerFactory.CreateLogger<ArticleMapper>());
         }
 
@@ -140,6 +144,7 @@ namespace DynamicsToXmlTranslator
                 // Convertir les articles
                 Console.WriteLine("Conversion des articles au format WINDEV...");
                 var winDevArticles = new List<WinDevArticle>();
+                var originalIds = new List<int>();
                 int erreurs = 0;
 
                 foreach (var article in articles)
@@ -148,6 +153,7 @@ namespace DynamicsToXmlTranslator
                     if (winDevArticle != null)
                     {
                         winDevArticles.Add(winDevArticle);
+                        originalIds.Add(article.Id);
                     }
                     else
                     {
@@ -168,7 +174,7 @@ namespace DynamicsToXmlTranslator
                 if (winDevArticles.Count > batchSize)
                 {
                     // Export par lots
-                    var files = await _xmlExportService.ExportInBatchesAsync(winDevArticles, batchSize);
+                    var files = await _xmlExportService.ExportInBatchesAsync(winDevArticles, originalIds, batchSize);
                     Console.WriteLine($"✓ Export terminé : {files.Count} fichiers créés");
 
                     foreach (var file in files)
@@ -187,7 +193,7 @@ namespace DynamicsToXmlTranslator
                 else
                 {
                     // Export en un seul fichier
-                    var filePath = await _xmlExportService.ExportToXmlAsync(winDevArticles);
+                    var filePath = await _xmlExportService.ExportToXmlAsync(winDevArticles, originalIds);
                     Console.WriteLine($"✓ Export terminé : {Path.GetFileName(filePath)}");
 
                     // Enregistrer le log d'export
@@ -198,6 +204,7 @@ namespace DynamicsToXmlTranslator
                     );
                 }
 
+                Console.WriteLine($"✅ {winDevArticles.Count} articles marqués comme exportés");
                 stopwatch.Stop();
                 Console.WriteLine($"\n⏱ Temps total : {stopwatch.ElapsedMilliseconds}ms");
             }
@@ -255,13 +262,22 @@ namespace DynamicsToXmlTranslator
                 }
 
                 // Convertir et exporter
-                var winDevArticles = articles
-                    .Select(a => _articleMapper.MapToWinDev(a))
-                    .Where(a => a != null)
-                    .ToList();
+                var winDevArticles = new List<WinDevArticle>();
+                var originalIds = new List<int>();
 
-                var filePath = await _xmlExportService.ExportToXmlAsync(winDevArticles);
+                foreach (var article in articles)
+                {
+                    var winDevArticle = _articleMapper.MapToWinDev(article);
+                    if (winDevArticle != null)
+                    {
+                        winDevArticles.Add(winDevArticle);
+                        originalIds.Add(article.Id);
+                    }
+                }
+
+                var filePath = await _xmlExportService.ExportToXmlAsync(winDevArticles, originalIds);
                 Console.WriteLine($"✓ Export terminé : {Path.GetFileName(filePath)}");
+                Console.WriteLine($"✅ {winDevArticles.Count} articles marqués comme exportés");
 
                 await _databaseService.LogExportAsync(
                     Path.GetFileName(filePath),
@@ -336,6 +352,83 @@ namespace DynamicsToXmlTranslator
             {
                 _logger.LogError(ex, "Erreur lors de l'affichage des statistiques");
                 Console.WriteLine($"❌ Erreur : {ex.Message}");
+            }
+        }
+
+        private static async Task ExportNewArticlesOnly()
+        {
+            try
+            {
+                Console.WriteLine("\n=== Export des nouveaux articles uniquement ===");
+
+                // Récupérer uniquement les articles non exportés
+                var articles = await _databaseService.GetNonExportedArticlesAsync();
+
+                if (!articles.Any())
+                {
+                    Console.WriteLine("✓ Aucun nouvel article à exporter");
+                    return;
+                }
+
+                Console.WriteLine($"📦 {articles.Count} nouveaux articles trouvés");
+
+                // Convertir les articles
+                Console.WriteLine("Conversion des articles au format WINDEV...");
+                var winDevArticles = new List<WinDevArticle>();
+                var originalIds = new List<int>();
+                int erreurs = 0;
+
+                foreach (var article in articles)
+                {
+                    var winDevArticle = _articleMapper.MapToWinDev(article);
+                    if (winDevArticle != null)
+                    {
+                        winDevArticles.Add(winDevArticle);
+                        originalIds.Add(article.Id);
+                    }
+                    else
+                    {
+                        erreurs++;
+                    }
+                }
+
+                Console.WriteLine($"✓ {winDevArticles.Count} articles convertis avec succès");
+                if (erreurs > 0)
+                {
+                    Console.WriteLine($"⚠ {erreurs} articles n'ont pas pu être convertis");
+                }
+
+                // Exporter en XML avec marquage automatique
+                Console.WriteLine("Export en fichier(s) XML...");
+                var batchSize = _configuration.GetValue<int>("XmlExport:BatchSize", 1000);
+
+                if (winDevArticles.Count > batchSize)
+                {
+                    // Export par lots
+                    var files = await _xmlExportService.ExportInBatchesAsync(winDevArticles, originalIds, batchSize);
+                    Console.WriteLine($"✓ Export terminé : {files.Count} fichiers créés");
+
+                    foreach (var file in files)
+                    {
+                        Console.WriteLine($"  - {Path.GetFileName(file)}");
+                    }
+                }
+                else
+                {
+                    // Export en un seul fichier
+                    var filePath = await _xmlExportService.ExportToXmlAsync(winDevArticles, originalIds);
+                    if (filePath != null)
+                    {
+                        Console.WriteLine($"✓ Export terminé : {Path.GetFileName(filePath)}");
+                    }
+                }
+
+                Console.WriteLine($"✅ {winDevArticles.Count} articles marqués comme exportés");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Erreur lors de l'export des nouveaux articles : {ex.Message}");
+                _logger.LogError(ex, "Erreur lors de l'export des nouveaux articles");
             }
         }
     }

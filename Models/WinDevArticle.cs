@@ -87,6 +87,10 @@ namespace DynamicsToXmlTranslator.Models
         [XmlElement("ART_NSS")]
         public int ArtNss { get; set; } = 0; // TrackingProoftag → ART_PAR.ART_NSS
 
+        // ========== RÉTIQUETAGE ==========
+        [XmlElement("ART_TOP1")]
+        public int ArtTop1 { get; set; } = 0; // ProducVersionAttribute → ART_PAR.ART_TOP1
+
         // ========== DIMENSIONS BRUTES ==========
         [XmlElement("ART_LONU")]
         public decimal ArtLonu { get; set; } = 0; // grossDepth → ART_PAR.ART_LONU

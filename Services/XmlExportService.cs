@@ -18,11 +18,13 @@ namespace DynamicsToXmlTranslator.Services
         private readonly IConfiguration _configuration;
         private readonly ILogger<XmlExportService> _logger;
         private readonly string _exportDirectory;
+        private readonly DatabaseService _databaseService;
 
-        public XmlExportService(IConfiguration configuration, ILogger<XmlExportService> logger)
+        public XmlExportService(IConfiguration configuration, ILogger<XmlExportService> logger, DatabaseService databaseService)
         {
             _configuration = configuration;
             _logger = logger;
+            _databaseService = databaseService;
 
             _exportDirectory = _configuration["XmlExport:OutputDirectory"] ?? "exports";
 
@@ -37,7 +39,7 @@ namespace DynamicsToXmlTranslator.Services
         /// <summary>
         /// Exporte une liste d'articles WINDEV en fichier XML
         /// </summary>
-        public async Task<string?> ExportToXmlAsync(List<WinDevArticle> articles, string fileNamePrefix = "ARTICLE_COSMETIQUE")
+        public async Task<string?> ExportToXmlAsync(List<WinDevArticle> articles, List<int> originalArticleIds = null, string fileNamePrefix = "ARTICLE_COSMETIQUE")
         {
             if (articles == null || !articles.Any())
             {
@@ -85,6 +87,13 @@ namespace DynamicsToXmlTranslator.Services
                 }
 
                 _logger.LogInformation($"Export XML réussi : {fileName} ({articles.Count} articles)");
+
+                // NOUVEAU : Marquer les articles comme exportés
+                if (originalArticleIds != null && originalArticleIds.Any())
+                {
+                    await _databaseService.MarkArticlesAsExportedAsync(originalArticleIds, fileName);
+                }
+
                 return filePath;
             }
             catch (Exception ex)
@@ -97,7 +106,7 @@ namespace DynamicsToXmlTranslator.Services
         /// <summary>
         /// Exporte les articles par lots
         /// </summary>
-        public async Task<List<string>> ExportInBatchesAsync(List<WinDevArticle> articles, int batchSize = 1000)
+        public async Task<List<string>> ExportInBatchesAsync(List<WinDevArticle> articles, List<int> originalArticleIds = null, int batchSize = 1000)
         {
             var exportedFiles = new List<string>();
 
@@ -116,6 +125,17 @@ namespace DynamicsToXmlTranslator.Services
                     .Select(g => g.Select(x => x.article).ToList())
                     .ToList();
 
+                // Diviser aussi les IDs si fournis
+                List<List<int>>? originalIdBatches = null;
+                if (originalArticleIds != null && originalArticleIds.Any())
+                {
+                    originalIdBatches = originalArticleIds
+                        .Select((id, index) => new { id, index })
+                        .GroupBy(x => x.index / batchSize)
+                        .Select(g => g.Select(x => x.id).ToList())
+                        .ToList();
+                }
+
                 _logger.LogInformation($"Export de {articles.Count} articles en {batches.Count} fichiers");
 
                 // Générer un timestamp unique pour tous les lots
@@ -126,6 +146,7 @@ namespace DynamicsToXmlTranslator.Services
                 {
                     var batch = batches[i];
                     var batchNumber = i + 1;
+                    var batchIds = originalIdBatches?[i];
 
                     _logger.LogInformation($"Export du lot {batchNumber}/{batches.Count} ({batch.Count} articles)");
 
@@ -170,6 +191,12 @@ namespace DynamicsToXmlTranslator.Services
                     {
                         exportedFiles.Add(filePath);
                         _logger.LogInformation($"Lot {batchNumber} exporté : {fileName}");
+
+                        // NOUVEAU : Marquer les articles du lot comme exportés
+                        if (batchIds != null && batchIds.Any())
+                        {
+                            await _databaseService.MarkArticlesAsExportedAsync(batchIds, fileName);
+                        }
                     }
                 }
 
@@ -189,7 +216,7 @@ namespace DynamicsToXmlTranslator.Services
         {
             var testArticles = new List<WinDevArticle>();
 
-            return await ExportToXmlAsync(testArticles, "ARTICLE_TEST_VIDE");
+            return await ExportToXmlAsync(testArticles, null, "ARTICLE_TEST_VIDE");
         }
 
         /// <summary>

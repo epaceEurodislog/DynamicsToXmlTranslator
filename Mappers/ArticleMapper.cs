@@ -68,6 +68,9 @@ namespace DynamicsToXmlTranslator.Mappers
                     ArtLot2 = dynamics.TrackingLot2, // TrackingLot2 → ART_PAR.ART_LOT2
                     ArtNss = dynamics.TrackingProoftag > 0 ? 1 : 0, // RG18: Si gestion des prooftag valeur 1 sinon 0
 
+                    // ========== RÉTIQUETAGE ==========
+                    ArtTop1 = ConvertVersionAttributeToInt(dynamics.ProducVersionAttribute), // ProducVersionAttribute → ART_PAR.ART_TOP1
+
                     // ========== DIMENSIONS BRUTES ==========
                     ArtLonu = dynamics.grossDepth, // grossDepth → ART_PAR.ART_LONU
                     ArtLaru = dynamics.grossWidth, // grossWidth → ART_PAR.ART_LARU
@@ -125,6 +128,23 @@ namespace DynamicsToXmlTranslator.Mappers
         }
 
         /// <summary>
+        /// Convertit ProducVersionAttribute en entier pour ART_TOP1
+        /// </summary>
+        private int ConvertVersionAttributeToInt(string? versionAttribute)
+        {
+            if (string.IsNullOrEmpty(versionAttribute))
+                return 0;
+
+            // Logique de conversion selon vos besoins
+            return versionAttribute.ToUpper() switch
+            {
+                "YES" or "OUI" or "Y" or "O" => 1,
+                "NO" or "NON" or "N" => 0,
+                _ => int.TryParse(versionAttribute, out var result) ? result : 0
+            };
+        }
+
+        /// <summary>
         /// Valide qu'un article a les données minimales requises
         /// </summary>
         public bool ValidateArticle(Article article)
@@ -174,6 +194,7 @@ namespace DynamicsToXmlTranslator.Mappers
                    $"  FactorColli: {dynamics.FactorColli} → ART_PAR.ART_QTEC\n" +
                    $"  FactorPallet: {dynamics.FactorPallet} → ART_PAR.ART_QTEP (RG8)\n" +
                    $"  PdsShelfLife: {dynamics.PdsShelfLife} → ART_PAR.ART_NUM19 (RG10: 1620 si vide)\n" +
+                   $"  ProducVersionAttribute: '{dynamics.ProducVersionAttribute}' → ART_PAR.ART_TOP1\n" +
                    $"  ACT_CODE: 'COSMETIQUE' (fixe)\n" +
                    $"  Suivi: L1={dynamics.TrackingLot1}, L2={dynamics.TrackingLot2}, DLUO={dynamics.TrackingDLCDDLUO}\n" +
                    $"  Prooftag: {dynamics.TrackingProoftag} → ART_NSS (RG18: 1 si >0, sinon 0)";

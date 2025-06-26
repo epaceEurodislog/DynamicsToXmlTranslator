@@ -68,5 +68,10 @@ namespace DynamicsToXmlTranslator.Models
         // Zone de données
         public string? dataAreaId { get; set; }  // Remplace DataAreaId
 
+        public bool XmlExported { get; set; } = false;
+        public DateTime? XmlExportDate { get; set; }
+        public string? XmlExportBatch { get; set; }
+
+
     }
 }
