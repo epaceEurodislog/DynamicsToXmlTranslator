@@ -45,7 +45,7 @@ namespace DynamicsToXmlTranslator.Mappers
                     ArtEanu = dynamics.itemBarCode ?? "", // itemBarCode → ART_PAR.ART_EANU
 
                     // ========== CATÉGORIES ET GROUPES ==========
-                    ArtAlpha17 = dynamics.Category ?? "", // Category → ART.ALPHA17
+                    ArtAlpha17 = TransformCategory(dynamics.Category), // Category transformée → ART.ALPHA17
                     ArtAlpha3 = dynamics.OrigCountryRegionId ?? "", // OrigCountryRegionId → ART.ALPHA3
 
                     // ========== STATUT ET POIDS ==========
@@ -100,7 +100,7 @@ namespace DynamicsToXmlTranslator.Mappers
                     ArtEanc = ""
                 };
 
-                _logger.LogDebug($"Article mappé: {dynamics.ItemId} → Code: {winDev.ArtCode}, ACT: {winDev.ActCode}");
+                _logger.LogDebug($"Article mappé: {dynamics.ItemId} → Code: {winDev.ArtCode}, Catégorie: {dynamics.Category} → {winDev.ArtAlpha17}");
                 return winDev;
             }
             catch (Exception ex)
@@ -108,6 +108,31 @@ namespace DynamicsToXmlTranslator.Mappers
                 _logger.LogError(ex, $"Erreur lors du mapping de l'article {article.ItemId}");
                 return null;
             }
+        }
+
+        /// <summary>
+        /// Transforme la catégorie selon les règles métier demandées
+        /// </summary>
+        private string TransformCategory(string? category)
+        {
+            if (string.IsNullOrEmpty(category))
+                return "Autres";
+
+            // Appliquer les règles de transformation
+            if (category.Contains("Produit Fini"))
+                return "PF";
+            else if (category.Contains("Accessoire"))
+                return "Machine et accessoire";
+            else if (category.Contains("Démonstration"))
+                return "Machine et accessoire";
+            else if (category.Contains("Reconditionné"))
+                return "Machine et accessoire";
+            else if (category.Contains("Appareils"))
+                return "Machine et accessoire";
+            else if (category.Contains("ECHANTILLON"))
+                return "Echantillon";
+            else
+                return "Autres";
         }
 
         /// <summary>
@@ -179,6 +204,7 @@ namespace DynamicsToXmlTranslator.Mappers
                 return "Aucune donnée disponible";
 
             var dynamics = article.DynamicsData;
+            var transformedCategory = TransformCategory(dynamics.Category);
 
             return $"=== MAPPING ARTICLE (selon Excel + RG) ===\n" +
                    $"API → SPEED:\n" +
@@ -188,7 +214,7 @@ namespace DynamicsToXmlTranslator.Mappers
                    $"  Name: '{dynamics.Name}' → ART_PAR.ART_DESL\n" +
                    $"  UnitId: '{dynamics.UnitId}' → ART_PAR.ART_ALPHA2 (RG11: UNITE si vide)\n" +
                    $"  itemBarCode: '{dynamics.itemBarCode}' → ART_PAR.ART_EANU\n" +
-                   $"  Category: '{dynamics.Category}' → ART.ALPHA17\n" +
+                   $"  Category: '{dynamics.Category}' → '{transformedCategory}' → ART.ALPHA17\n" +
                    $"  OrigCountryRegionId: '{dynamics.OrigCountryRegionId}' → ART.ALPHA3\n" +
                    $"  GrossWeight: {dynamics.GrossWeight}g → ART_PAR.ART_POIU\n" +
                    $"  FactorColli: {dynamics.FactorColli} → ART_PAR.ART_QTEC\n" +
@@ -197,7 +223,8 @@ namespace DynamicsToXmlTranslator.Mappers
                    $"  ProducVersionAttribute: '{dynamics.ProducVersionAttribute}' → ART_PAR.ART_TOP1\n" +
                    $"  ACT_CODE: 'COSMETIQUE' (fixe)\n" +
                    $"  Suivi: L1={dynamics.TrackingLot1}, L2={dynamics.TrackingLot2}, DLUO={dynamics.TrackingDLCDDLUO}\n" +
-                   $"  Prooftag: {dynamics.TrackingProoftag} → ART_NSS (RG18: 1 si >0, sinon 0)";
+                   $"  Prooftag: {dynamics.TrackingProoftag} → ART_NSS (RG18: 1 si >0, sinon 0)\n" +
+                   $"  Transformation catégorie: '{dynamics.Category}' → '{transformedCategory}'";
         }
     }
 }

@@ -1,18 +1,19 @@
 namespace DynamicsToXmlTranslator.Models
 {
     /// <summary>
-    /// Représente un article tel qu'il est stocké dans votre table articles_raw
+    /// Représente un article tel qu'il est stocké dans votre table JSON_IN
     /// </summary>
     public class Article
     {
-        public int Id { get; set; }
-        public string JsonData { get; set; }
-        public string ContentHash { get; set; }
-        public string? ApiEndpoint { get; set; }
-        public string? ItemId { get; set; }
-        public DateTime FirstSeenAt { get; set; }
-        public DateTime LastUpdatedAt { get; set; }
-        public int UpdateCount { get; set; }
+        // Correspondance avec la nouvelle table JSON_IN
+        public int Id { get; set; }                    // JSON_KEY (PK)
+        public string JsonData { get; set; }           // JSON_DATA
+        public string ContentHash { get; set; }        // JSON_HASH (nouveau champ)
+        public string? ApiEndpoint { get; set; }       // JSON_FROM
+        public string? ItemId { get; set; }            // Extrait de JSON_BKEY
+        public DateTime FirstSeenAt { get; set; }      // JSON_CRD
+        public DateTime LastUpdatedAt { get; set; }    // JSON_CRD (même valeur)
+        public int UpdateCount { get; set; } = 0;      // Calculé (non stocké)
 
         // Propriétés extraites du JSON Dynamics
         public DynamicsArticle? DynamicsData { get; set; }
@@ -71,7 +72,5 @@ namespace DynamicsToXmlTranslator.Models
         public bool XmlExported { get; set; } = false;
         public DateTime? XmlExportDate { get; set; }
         public string? XmlExportBatch { get; set; }
-
-
     }
 }
