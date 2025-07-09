@@ -22,37 +22,40 @@ namespace DynamicsToXmlTranslator.Models
     }
 
     /// <summary>
-    /// Structure des données Return Order Dynamics selon le mapping fourni
+    /// Structure des données Return Order Dynamics selon votre JSON
     /// </summary>
     public class DynamicsReturnOrder
     {
         // Identifiants principaux
-        public string? dataAreaId { get; set; }            // Société Référence → OPE_DAT.OPE_CCLI
-        public string? ReturnItemNum { get; set; }         // Expected Receipt Number → REA_DAT.REA_RFCE
-        public string? SalesId { get; set; }               // N° Commande Vente → REA_DAT.REA_RFTI
-        public string? SalesStatus { get; set; }           // Statut Commande Vente
-        public DateTime? ReturnDeadline { get; set; }      // Date de réception prévue → REA_DAT.REA_DALP
+        public string? dataAreaId { get; set; }            // "br" → Société Référence
+        public string? SalesId { get; set; }               // "SO000191" → N° Commande Vente
+        public string? ReturnItemNum { get; set; }         // "OR000021" → Expected Receipt Number
+        public string? SalesStatus { get; set; }           // "Backorder" → Statut Commande Vente
+        public DateTime? ReturnDeadline { get; set; }      // "2025-06-30T12:00:00Z" → Date de réception prévue
 
         // Fournisseur/Client
-        public string? CustAccount { get; set; }           // Code tiers fournisseurs/Client → REA_DAT.REA_CTAF
-        public string? SalesName { get; set; }             // Nom tiers fournisseurs/Client
+        public string? CustAccount { get; set; }           // "C0000002" → Code tiers client
+        public string? SalesName { get; set; }             // "ALMEDA ENTERPRISE COMPANY LTD" → Nom tiers client
 
         // Code disposition
-        public string? ReturnDispositionCodeID { get; set; } // Code disposition
+        public string? ReturnDispositionCodeId { get; set; } // "" → Code disposition
 
         // Détails ligne
-        public int LineNum { get; set; }                   // Numéro ligne de commande → REA_DAT.REA_NoLR
-        public string? ItemId { get; set; }                // Référence article → REA_DAT.ART_CODE
-        public decimal ExpectedRetQty { get; set; }        // Quantité prévue → REA_DAT.REA_QTRE
-        public string? InventLocationId { get; set; }      // Entrepot destinataire D365
+        public int LineNum { get; set; }                   // 1 → Numéro ligne de commande
+        public string? ItemId { get; set; }                // "BAINP200" → Référence article
+        public decimal ExpectedRetQty { get; set; }        // 0 → Quantité prévue
+        public string? InventLocationId { get; set; }      // "12" → Entrepot destinataire D365
 
         // Traçabilité
-        public string? inventBatchId { get; set; }         // Lot → REA_DAT.REA_LOT1
-        public string? inventSerialId { get; set; }        // Lot 2 (N° série Machine) → REA_DAT.REA_LOT2
-        public DateTime? expDate { get; set; }             // DLUO → REA_DAT.REA_DLUO
+        public string? inventBatchId { get; set; }         // "" → Lot
+        public string? inventSerialId { get; set; }        // "" → Lot 2 (N° série Machine)
+        public DateTime? expDate { get; set; }             // "1900-01-01T12:00:00Z" → DLUO
 
         // Support et commentaires
-        public string? Notes { get; set; }                 // Commentaires → REA_DAT.REA_COM
+        public string? Notes { get; set; }                 // "" → Commentaires
+
+        // Statut 3PL
+        public string? INT3PLStatus { get; set; }          // "None" → Statut 3PL
 
         // Propriétés d'export
         public bool XmlExported { get; set; } = false;
