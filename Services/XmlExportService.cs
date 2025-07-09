@@ -61,14 +61,15 @@ namespace DynamicsToXmlTranslator.Services
                     Articles = articles
                 };
 
-                // Configuration du serializer XML
+                // ✅ MODIFICATION : Configuration pour forcer les balises fermantes
                 var settings = new XmlWriterSettings
                 {
                     Encoding = Encoding.GetEncoding("ISO-8859-1"),
                     Indent = true,
                     IndentChars = "\t",
                     OmitXmlDeclaration = false,
-                    CloseOutput = true
+                    CloseOutput = true,
+                    ConformanceLevel = ConformanceLevel.Document
                 };
 
                 // Serialisation
@@ -83,6 +84,9 @@ namespace DynamicsToXmlTranslator.Services
 
                     serializer.Serialize(writer, winDevTable, namespaces);
                 }
+
+                // ✅ NOUVEAU : Post-traitement pour forcer les balises fermantes
+                await ForceClosingTagsAsync(filePath);
 
                 _logger.LogInformation($"Export XML réussi : {fileName} ({articles.Count} articles)");
 
@@ -159,14 +163,15 @@ namespace DynamicsToXmlTranslator.Services
                         Articles = batch
                     };
 
-                    // Configuration du serializer XML
+                    // ✅ MODIFICATION : Configuration pour forcer les balises fermantes
                     var settings = new XmlWriterSettings
                     {
                         Encoding = Encoding.GetEncoding("ISO-8859-1"),
                         Indent = true,
                         IndentChars = "\t",
                         OmitXmlDeclaration = false,
-                        CloseOutput = true
+                        CloseOutput = true,
+                        ConformanceLevel = ConformanceLevel.Document
                     };
 
                     // Serialisation directe pour les lots
@@ -180,6 +185,9 @@ namespace DynamicsToXmlTranslator.Services
 
                         serializer.Serialize(writer, winDevTable, namespaces);
                     }
+
+                    // ✅ NOUVEAU : Post-traitement pour forcer les balises fermantes
+                    await ForceClosingTagsAsync(filePath);
 
                     if (File.Exists(filePath))
                     {
@@ -200,6 +208,40 @@ namespace DynamicsToXmlTranslator.Services
             {
                 _logger.LogError(ex, "Erreur lors de l'export par lots");
                 throw;
+            }
+        }
+
+        /// <summary>
+        /// ✅ NOUVELLE MÉTHODE : Force les balises fermantes au lieu des balises auto-fermantes
+        /// </summary>
+        private async Task ForceClosingTagsAsync(string filePath)
+        {
+            try
+            {
+                string content = await File.ReadAllTextAsync(filePath, Encoding.GetEncoding("ISO-8859-1"));
+
+                // Remplacer les balises auto-fermantes par des balises fermantes pour les articles
+                var tagsToReplace = new[]
+                {
+                    "ART_CCLI", "ART_CODE", "ART_CODC", "ART_DESL", "ART_ALPHA2", "ART_EANU",
+                    "ART_ALPHA17", "ART_ALPHA3", "ART_STAT", "ART_ALPHA8", "ART_ALPHA14",
+                    "ART_RSTK", "ART_SPCB", "ART_ALPHA18", "ART_ALPHA24", "ART_ALPHA26",
+                    "ART_NSE", "ART_EANC"
+                };
+
+                foreach (var tag in tagsToReplace)
+                {
+                    // Remplacer <TAG /> par <TAG></TAG>
+                    content = content.Replace($"<{tag} />", $"<{tag}></{tag}>");
+                    // Remplacer <TAG/> par <TAG></TAG> (sans espace)
+                    content = content.Replace($"<{tag}/>", $"<{tag}></{tag}>");
+                }
+
+                await File.WriteAllTextAsync(filePath, content, Encoding.GetEncoding("ISO-8859-1"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Erreur lors du post-traitement des balises fermantes pour {filePath}");
             }
         }
 

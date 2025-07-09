@@ -60,13 +60,15 @@ namespace DynamicsToXmlTranslator.Services
                     ReturnOrders = returnOrders
                 };
 
+                // ✅ MODIFICATION : Configuration pour forcer les balises fermantes
                 var settings = new XmlWriterSettings
                 {
                     Encoding = Encoding.GetEncoding("ISO-8859-1"),
                     Indent = true,
                     IndentChars = "\t",
                     OmitXmlDeclaration = false,
-                    CloseOutput = true
+                    CloseOutput = true,
+                    ConformanceLevel = ConformanceLevel.Document
                 };
 
                 using (var writer = XmlWriter.Create(filePath, settings))
@@ -79,6 +81,9 @@ namespace DynamicsToXmlTranslator.Services
 
                     serializer.Serialize(writer, winDevReturnTable, namespaces);
                 }
+
+                // ✅ NOUVEAU : Post-traitement pour forcer les balises fermantes
+                await ForceClosingTagsAsync(filePath);
 
                 _logger.LogInformation($"Export XML Return Orders réussi : {fileName} ({returnOrders.Count} Return Orders)");
 
@@ -148,13 +153,15 @@ namespace DynamicsToXmlTranslator.Services
                         ReturnOrders = batch
                     };
 
+                    // ✅ MODIFICATION : Configuration pour forcer les balises fermantes
                     var settings = new XmlWriterSettings
                     {
                         Encoding = Encoding.GetEncoding("ISO-8859-1"),
                         Indent = true,
                         IndentChars = "\t",
                         OmitXmlDeclaration = false,
-                        CloseOutput = true
+                        CloseOutput = true,
+                        ConformanceLevel = ConformanceLevel.Document
                     };
 
                     using (var writer = XmlWriter.Create(filePath, settings))
@@ -167,6 +174,9 @@ namespace DynamicsToXmlTranslator.Services
 
                         serializer.Serialize(writer, winDevReturnTable, namespaces);
                     }
+
+                    // ✅ NOUVEAU : Post-traitement pour forcer les balises fermantes
+                    await ForceClosingTagsAsync(filePath);
 
                     if (File.Exists(filePath))
                     {
@@ -186,6 +196,38 @@ namespace DynamicsToXmlTranslator.Services
             {
                 _logger.LogError(ex, "Erreur lors de l'export Return Orders par lots");
                 throw;
+            }
+        }
+
+        /// <summary>
+        /// ✅ NOUVELLE MÉTHODE : Force les balises fermantes au lieu des balises auto-fermantes
+        /// </summary>
+        private async Task ForceClosingTagsAsync(string filePath)
+        {
+            try
+            {
+                string content = await File.ReadAllTextAsync(filePath, Encoding.GetEncoding("ISO-8859-1"));
+
+                // Remplacer les balises auto-fermantes par des balises fermantes
+                var tagsToReplace = new[]
+                {
+                    "REA_LOT1", "REA_LOT2", "REA_DLUO", "REA_NoSU", "REA_COM", "REA_RFAF",
+                    "SalesStatus", "ReturnDispositionCodeID", "SalesName", "InventLocationId"
+                };
+
+                foreach (var tag in tagsToReplace)
+                {
+                    // Remplacer <TAG /> par <TAG></TAG>
+                    content = content.Replace($"<{tag} />", $"<{tag}></{tag}>");
+                    // Remplacer <TAG/> par <TAG></TAG> (sans espace)
+                    content = content.Replace($"<{tag}/>", $"<{tag}></{tag}>");
+                }
+
+                await File.WriteAllTextAsync(filePath, content, Encoding.GetEncoding("ISO-8859-1"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Erreur lors du post-traitement des balises fermantes pour {filePath}");
             }
         }
 
