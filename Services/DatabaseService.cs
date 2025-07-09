@@ -50,21 +50,22 @@ namespace DynamicsToXmlTranslator.Services
 
                     using (var command = connection.CreateCommand())
                     {
-                        // CORRIGÉ : Requête avec les vrais noms de colonnes
+                        // ✅ AJOUT du filtre JSON_FROM pour ne récupérer QUE les articles
                         command.CommandText = @"
-                            SELECT 
-                                JSON_KEYU,
-                                JSON_DATA,
-                                JSON_HASH,
-                                JSON_FROM,
-                                JSON_BKEY,
-                                JSON_CRDA,
-                                JSON_CRDA as last_updated_at,
-                                0 as update_count
-                            FROM dbo.JSON_IN
-                            WHERE (JSON_STAT = 'ACTIVE' OR JSON_STAT IS NULL)
-                            AND (JSON_CCLI = 'BR' OR JSON_CCLI IS NULL)
-                            ORDER BY JSON_BKEY";
+                    SELECT 
+                        JSON_KEYU,
+                        JSON_DATA,
+                        JSON_HASH,
+                        JSON_FROM,
+                        JSON_BKEY,
+                        JSON_CRDA,
+                        JSON_CRDA as last_updated_at,
+                        0 as update_count
+                    FROM dbo.JSON_IN
+                    WHERE (JSON_STAT = 'ACTIVE' OR JSON_STAT IS NULL)
+                    AND (JSON_CCLI = 'BR' OR JSON_CCLI IS NULL)
+                    AND JSON_FROM = 'data/BRINT34ReleasedProducts'
+                    ORDER BY JSON_BKEY";
 
                         using (var reader = await command.ExecuteReaderAsync())
                         {
@@ -128,22 +129,23 @@ namespace DynamicsToXmlTranslator.Services
 
                     using (var command = connection.CreateCommand())
                     {
-                        // CORRIGÉ : Requête avec les vrais noms de colonnes
+                        // ✅ AJOUT du filtre JSON_FROM pour ne récupérer QUE les articles
                         command.CommandText = @"
-                            SELECT 
-                                JSON_KEYU,
-                                JSON_DATA,
-                                JSON_HASH,
-                                JSON_FROM,
-                                JSON_BKEY,
-                                JSON_CRDA,
-                                JSON_CRDA as last_updated_at,
-                                0 as update_count
-                            FROM dbo.JSON_IN
-                            WHERE (JSON_STAT = 'ACTIVE' OR JSON_STAT IS NULL)
-                            AND (JSON_CCLI = 'BR' OR JSON_CCLI IS NULL)
-                            AND JSON_CRDA >= @sinceDate
-                            ORDER BY JSON_BKEY";
+                    SELECT 
+                        JSON_KEYU,
+                        JSON_DATA,
+                        JSON_HASH,
+                        JSON_FROM,
+                        JSON_BKEY,
+                        JSON_CRDA,
+                        JSON_CRDA as last_updated_at,
+                        0 as update_count
+                    FROM dbo.JSON_IN
+                    WHERE (JSON_STAT = 'ACTIVE' OR JSON_STAT IS NULL)
+                    AND (JSON_CCLI = 'BR' OR JSON_CCLI IS NULL)
+                    AND JSON_CRDA >= @sinceDate
+                    AND JSON_FROM = 'data/BRINT34ReleasedProducts'
+                    ORDER BY JSON_BKEY";
 
                         command.Parameters.AddWithValue("@sinceDate", sinceDate);
 
@@ -182,7 +184,7 @@ namespace DynamicsToXmlTranslator.Services
                     }
                 }
 
-                _logger.LogInformation($"{articles.Count} articles récupérés depuis {sinceDate:yyyy-MM-dd HH:mm:ss}");
+                _logger.LogInformation($"{articles.Count} articles récupérés depuis {sinceDate:yyyy-MM-dd HH:mm:ss} (articles uniquement)");
             }
             catch (Exception ex)
             {
@@ -209,22 +211,35 @@ namespace DynamicsToXmlTranslator.Services
 
                     using (var command = connection.CreateCommand())
                     {
-                        // CORRIGÉ : JSON_TRTP = 0 signifie "en attente d'export"
+                        // ✅ CORRECTION COMPLÈTE : Déduplication + filtre articles + condition stricte
                         command.CommandText = @"
-                            SELECT 
-                                JSON_KEYU,
-                                JSON_DATA,
-                                JSON_HASH,
-                                JSON_FROM,
-                                JSON_BKEY,
-                                JSON_CRDA,
-                                JSON_CRDA as last_updated_at,
-                                0 as update_count
-                            FROM dbo.JSON_IN
-                            WHERE (JSON_STAT = 'ACTIVE' OR JSON_STAT IS NULL)
-                            AND (JSON_CCLI = 'BR' OR JSON_CCLI IS NULL)
-                            AND (JSON_TRTP = 0 OR JSON_TRTP IS NULL)
-                            ORDER BY JSON_BKEY";
+                    WITH UniqueArticles AS (
+                        SELECT 
+                            JSON_KEYU,
+                            JSON_DATA,
+                            JSON_HASH,
+                            JSON_FROM,
+                            JSON_BKEY,
+                            JSON_CRDA,
+                            ROW_NUMBER() OVER (PARTITION BY JSON_BKEY ORDER BY JSON_CRDA DESC) as RowNum
+                        FROM dbo.JSON_IN
+                        WHERE (JSON_STAT = 'ACTIVE' OR JSON_STAT IS NULL)
+                        AND (JSON_CCLI = 'BR' OR JSON_CCLI IS NULL)
+                        AND (JSON_TRTP IS NULL OR JSON_TRTP = 0)
+                        AND JSON_FROM = 'data/BRINT34ReleasedProducts'
+                    )
+                    SELECT 
+                        JSON_KEYU,
+                        JSON_DATA,
+                        JSON_HASH,
+                        JSON_FROM,
+                        JSON_BKEY,
+                        JSON_CRDA,
+                        JSON_CRDA as last_updated_at,
+                        0 as update_count
+                    FROM UniqueArticles
+                    WHERE RowNum = 1
+                    ORDER BY JSON_BKEY";
 
                         using (var reader = await command.ExecuteReaderAsync())
                         {
@@ -261,7 +276,7 @@ namespace DynamicsToXmlTranslator.Services
                     }
                 }
 
-                _logger.LogInformation($"{articles.Count} articles non exportés récupérés");
+                _logger.LogInformation($"{articles.Count} articles non exportés récupérés (articles uniquement)");
             }
             catch (Exception ex)
             {
@@ -291,16 +306,17 @@ namespace DynamicsToXmlTranslator.Services
 
                     using (var command = connection.CreateCommand())
                     {
-                        // CORRIGÉ : Mise à jour de JSON_TRTP et JSON_TRDA
+                        // ✅ AJOUT du filtre JSON_FROM pour la sécurité
                         var inClause = string.Join(",", articleIds.Select(id => id.ToString()));
 
                         command.CommandText = $@"
-                            UPDATE dbo.JSON_IN 
-                            SET 
-                                JSON_TRTP = 1,
-                                JSON_TRDA = GETDATE(),
-                                JSON_TREN = 'SPEED'
-                            WHERE JSON_KEYU IN ({inClause})";
+                    UPDATE dbo.JSON_IN 
+                    SET 
+                        JSON_TRTP = 1,
+                        JSON_TRDA = GETDATE(),
+                        JSON_TREN = 'SPEED'
+                    WHERE JSON_KEYU IN ({inClause})
+                    AND JSON_FROM = 'data/BRINT34ReleasedProducts'";
 
                         var updatedRows = await command.ExecuteNonQueryAsync();
                         _logger.LogInformation($"{updatedRows} articles marqués comme exportés");

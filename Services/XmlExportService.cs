@@ -81,14 +81,12 @@ namespace DynamicsToXmlTranslator.Services
                     var namespaces = new XmlSerializerNamespaces();
                     namespaces.Add("", ""); // Pas de namespace
 
-                    // Créer un custom XmlWriter pour forcer les balises fermées
-                    var customWriter = new ForceCloseTagXmlWriter(writer);
-                    serializer.Serialize(customWriter, winDevTable, namespaces);
+                    serializer.Serialize(writer, winDevTable, namespaces);
                 }
 
                 _logger.LogInformation($"Export XML réussi : {fileName} ({articles.Count} articles)");
 
-                // NOUVEAU : Marquer les articles comme exportés
+                // Marquer les articles comme exportés
                 if (originalArticleIds != null && originalArticleIds.Any())
                 {
                     await _databaseService.MarkArticlesAsExportedAsync(originalArticleIds, fileName);
@@ -152,8 +150,6 @@ namespace DynamicsToXmlTranslator.Services
 
                     // Format: ARTICLE_COSMETIQUE_LOT001_YYYYMMDD_HHMMSS.XML
                     string fileNamePrefix = $"ARTICLE_COSMETIQUE_LOT{batchNumber:D3}_{baseTimestamp}";
-
-                    // Pour les lots, on passe un nom complet sans timestamp supplémentaire
                     string fileName = $"{fileNamePrefix}.XML";
                     string filePath = Path.Combine(_exportDirectory, fileName);
 
@@ -182,9 +178,7 @@ namespace DynamicsToXmlTranslator.Services
                         var namespaces = new XmlSerializerNamespaces();
                         namespaces.Add("", "");
 
-                        // Créer un custom XmlWriter pour forcer les balises fermées
-                        var customWriter = new ForceCloseTagXmlWriter(writer);
-                        serializer.Serialize(customWriter, winDevTable, namespaces);
+                        serializer.Serialize(writer, winDevTable, namespaces);
                     }
 
                     if (File.Exists(filePath))
@@ -192,7 +186,7 @@ namespace DynamicsToXmlTranslator.Services
                         exportedFiles.Add(filePath);
                         _logger.LogInformation($"Lot {batchNumber} exporté : {fileName}");
 
-                        // NOUVEAU : Marquer les articles du lot comme exportés
+                        // Marquer les articles du lot comme exportés
                         if (batchIds != null && batchIds.Any())
                         {
                             await _databaseService.MarkArticlesAsExportedAsync(batchIds, fileName);
@@ -250,63 +244,5 @@ namespace DynamicsToXmlTranslator.Services
                 _logger.LogError(ex, "Erreur lors du test de mapping");
             }
         }
-    }
-
-    /// <summary>
-    /// Custom XmlWriter qui force la fermeture des balises vides
-    /// au lieu d'utiliser la syntaxe auto-fermante <tag />
-    /// </summary>
-    public class ForceCloseTagXmlWriter : XmlWriter
-    {
-        private readonly XmlWriter _writer;
-
-        public ForceCloseTagXmlWriter(XmlWriter writer)
-        {
-            _writer = writer;
-        }
-
-        public override void WriteStartElement(string prefix, string localName, string ns)
-        {
-            _writer.WriteStartElement(prefix, localName, ns);
-        }
-
-        public override void WriteEndElement()
-        {
-            _writer.WriteFullEndElement(); // Force l'écriture complète même pour les éléments vides
-        }
-
-        public override void WriteFullEndElement()
-        {
-            _writer.WriteFullEndElement();
-        }
-
-        public override void WriteString(string text)
-        {
-            _writer.WriteString(text);
-        }
-
-        // Déléguer toutes les autres méthodes au writer sous-jacent
-        public override void Close() => _writer.Close();
-        public override void Flush() => _writer.Flush();
-        public override string LookupPrefix(string ns) => _writer.LookupPrefix(ns);
-        public override void WriteBase64(byte[] buffer, int index, int count) => _writer.WriteBase64(buffer, index, count);
-        public override void WriteCData(string text) => _writer.WriteCData(text);
-        public override void WriteCharEntity(char ch) => _writer.WriteCharEntity(ch);
-        public override void WriteChars(char[] buffer, int index, int count) => _writer.WriteChars(buffer, index, count);
-        public override void WriteComment(string text) => _writer.WriteComment(text);
-        public override void WriteDocType(string name, string pubid, string sysid, string subset) => _writer.WriteDocType(name, pubid, sysid, subset);
-        public override void WriteEndAttribute() => _writer.WriteEndAttribute();
-        public override void WriteEndDocument() => _writer.WriteEndDocument();
-        public override void WriteEntityRef(string name) => _writer.WriteEntityRef(name);
-        public override void WriteProcessingInstruction(string name, string text) => _writer.WriteProcessingInstruction(name, text);
-        public override void WriteRaw(string data) => _writer.WriteRaw(data);
-        public override void WriteRaw(char[] buffer, int index, int count) => _writer.WriteRaw(buffer, index, count);
-        public override void WriteStartAttribute(string prefix, string localName, string ns) => _writer.WriteStartAttribute(prefix, localName, ns);
-        public override void WriteStartDocument() => _writer.WriteStartDocument();
-        public override void WriteStartDocument(bool standalone) => _writer.WriteStartDocument(standalone);
-        public override void WriteSurrogateCharEntity(char lowChar, char highChar) => _writer.WriteSurrogateCharEntity(lowChar, highChar);
-        public override void WriteWhitespace(string ws) => _writer.WriteWhitespace(ws);
-
-        public override WriteState WriteState => _writer.WriteState;
     }
 }
