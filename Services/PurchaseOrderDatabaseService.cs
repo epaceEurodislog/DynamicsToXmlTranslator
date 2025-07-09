@@ -212,7 +212,8 @@ namespace DynamicsToXmlTranslator.Services
                             SET 
                                 JSON_TRTP = 1,
                                 JSON_TRDA = GETDATE(),
-                                JSON_TREN = 'SPEED_PO'
+                                JSON_TREN = 'SPEED_PO',
+                                JSON_SENT = 1
                             WHERE JSON_KEYU IN ({inClause})";
 
                         var updatedRows = await command.ExecuteNonQueryAsync();

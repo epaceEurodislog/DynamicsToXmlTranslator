@@ -33,6 +33,11 @@ namespace DynamicsToXmlTranslator
         private static ReturnOrderXmlExportService _returnOrderXmlExportService;
         private static ReturnOrderMapper _returnOrderMapper;
 
+        // Services Transfer Orders
+        private static TransferOrderDatabaseService _transferOrderDatabaseService;
+        private static TransferOrderXmlExportService _transferOrderXmlExportService;
+        private static TransferOrderMapper _transferOrderMapper;
+
         static async Task Main(string[] args)
         {
             Console.WriteLine("=== Traducteur Dynamics vers XML WINDEV ===");
@@ -48,6 +53,7 @@ namespace DynamicsToXmlTranslator
                 // Vérifier/créer les tables nécessaires
                 await _databaseService.CreateTablesIfNotExistsAsync();
                 await _returnOrderDatabaseService.CreateReturnOrderTablesIfNotExistsAsync();
+                await _transferOrderDatabaseService.CreateTransferOrderTablesIfNotExistsAsync();
 
                 // Déterminer le mode d'exécution
                 bool isTestMode = IsTestMode(args);
@@ -75,6 +81,11 @@ namespace DynamicsToXmlTranslator
                     {
                         await ExportAllReturnOrdersTestMode();
                     }
+
+                    if (exportType == "transferorders" || exportType == "to" || exportType == "all")
+                    {
+                        await ExportAllTransferOrdersTestMode();
+                    }
                 }
                 else
                 {
@@ -94,6 +105,11 @@ namespace DynamicsToXmlTranslator
                     if (exportType == "returnorders" || exportType == "all")
                     {
                         await ExportNewReturnOrdersOnly();
+                    }
+
+                    if (exportType == "transferorders" || exportType == "to" || exportType == "all")
+                    {
+                        await ExportNewTransferOrdersOnly();
                     }
                 }
 
@@ -143,12 +159,14 @@ namespace DynamicsToXmlTranslator
             if (args.Length > 1)
             {
                 var exportType = args[1].ToLower();
-                if (exportType == "articles" || exportType == "purchaseorders" || exportType == "po" || exportType == "returnorders" || exportType == "ro")
+                if (exportType == "articles" || exportType == "purchaseorders" || exportType == "po" ||
+                    exportType == "returnorders" || exportType == "ro" || exportType == "transferorders" || exportType == "to")
                 {
                     return exportType switch
                     {
                         "po" => "purchaseorders",
                         "ro" => "returnorders",
+                        "to" => "transferorders",
                         _ => exportType
                     };
                 }
@@ -158,12 +176,14 @@ namespace DynamicsToXmlTranslator
             if (args.Length == 1 && !IsTestMode(args))
             {
                 var exportType = args[0].ToLower();
-                if (exportType == "articles" || exportType == "purchaseorders" || exportType == "po" || exportType == "returnorders" || exportType == "ro")
+                if (exportType == "articles" || exportType == "purchaseorders" || exportType == "po" ||
+                    exportType == "returnorders" || exportType == "ro" || exportType == "transferorders" || exportType == "to")
                 {
                     return exportType switch
                     {
                         "po" => "purchaseorders",
                         "ro" => "returnorders",
+                        "to" => "transferorders",
                         _ => exportType
                     };
                 }
@@ -360,6 +380,68 @@ namespace DynamicsToXmlTranslator
         }
 
         /// <summary>
+        /// Mode test : Export de tous les Transfer Orders SANS les marquer comme exportés
+        /// </summary>
+        private static async Task ExportAllTransferOrdersTestMode()
+        {
+            Console.WriteLine("\n🧪 MODE TEST - Export de tous les Transfer Orders");
+            var stopwatch = Stopwatch.StartNew();
+
+            try
+            {
+                // Récupérer TOUS les Transfer Orders
+                Console.WriteLine("Récupération de TOUS les Transfer Orders depuis la base de données...");
+                var transferOrders = await _transferOrderDatabaseService.GetAllTransferOrdersAsync();
+                Console.WriteLine($"✓ {transferOrders.Count} Transfer Orders trouvés (incluant ceux déjà exportés)");
+
+                if (transferOrders.Count == 0)
+                {
+                    Console.WriteLine("ℹ️ Aucun Transfer Order trouvé dans la base de données");
+                    return;
+                }
+
+                // Convertir les Transfer Orders
+                Console.WriteLine("Conversion des Transfer Orders au format WINDEV...");
+                var winDevTransferOrders = new List<WinDevTransferOrder>();
+                int erreurs = 0;
+
+                foreach (var transferOrder in transferOrders)
+                {
+                    var winDevTransferOrder = _transferOrderMapper.MapToWinDev(transferOrder);
+                    if (winDevTransferOrder != null)
+                    {
+                        winDevTransferOrders.Add(winDevTransferOrder);
+                    }
+                    else
+                    {
+                        erreurs++;
+                    }
+                }
+
+                Console.WriteLine($"✓ {winDevTransferOrders.Count} Transfer Orders convertis avec succès");
+                if (erreurs > 0)
+                {
+                    Console.WriteLine($"⚠️ {erreurs} Transfer Orders n'ont pas pu être convertis");
+                }
+
+                // Export en XML SANS marquer les Transfer Orders comme exportés
+                await ExportTransferOrdersInBatches(winDevTransferOrders, null, "TRANSFER_ORDERS_TEST_COMPLET");
+
+                Console.WriteLine($"🧪 MODE TEST : {winDevTransferOrders.Count} Transfer Orders exportés SANS marquage");
+                Console.WriteLine("⚠️ Les Transfer Orders ne sont PAS marqués comme exportés en mode test");
+
+                stopwatch.Stop();
+                Console.WriteLine($"⏱️ Temps Transfer Orders : {stopwatch.ElapsedMilliseconds}ms");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Erreur lors de l'export des Transfer Orders en mode test : {ex.Message}");
+                _logger.LogError(ex, "Erreur lors de l'export des Transfer Orders en mode test");
+                throw;
+            }
+        }
+
+        /// <summary>
         /// Mode production : Export des nouveaux articles uniquement avec marquage
         /// </summary>
         private static async Task ExportNewArticlesOnly()
@@ -546,6 +628,68 @@ namespace DynamicsToXmlTranslator
         }
 
         /// <summary>
+        /// Mode production : Export des nouveaux Transfer Orders uniquement avec marquage
+        /// </summary>
+        private static async Task ExportNewTransferOrdersOnly()
+        {
+            Console.WriteLine("\n🆕 Export des nouveaux Transfer Orders uniquement");
+            var stopwatch = Stopwatch.StartNew();
+
+            try
+            {
+                // Récupérer uniquement les Transfer Orders non exportés
+                Console.WriteLine("Récupération des nouveaux Transfer Orders depuis la base de données...");
+                var transferOrders = await _transferOrderDatabaseService.GetNonExportedTransferOrdersAsync();
+                Console.WriteLine($"✓ {transferOrders.Count} nouveaux Transfer Orders trouvés");
+
+                if (transferOrders.Count == 0)
+                {
+                    Console.WriteLine("ℹ️ Aucun nouveau Transfer Order à exporter");
+                    return;
+                }
+
+                // Convertir les Transfer Orders
+                Console.WriteLine("Conversion des Transfer Orders au format WINDEV...");
+                var winDevTransferOrders = new List<WinDevTransferOrder>();
+                var originalIds = new List<int>();
+                int erreurs = 0;
+
+                foreach (var transferOrder in transferOrders)
+                {
+                    var winDevTransferOrder = _transferOrderMapper.MapToWinDev(transferOrder);
+                    if (winDevTransferOrder != null)
+                    {
+                        winDevTransferOrders.Add(winDevTransferOrder);
+                        originalIds.Add(transferOrder.Id);
+                    }
+                    else
+                    {
+                        erreurs++;
+                    }
+                }
+
+                Console.WriteLine($"✓ {winDevTransferOrders.Count} Transfer Orders convertis avec succès");
+                if (erreurs > 0)
+                {
+                    Console.WriteLine($"⚠️ {erreurs} Transfer Orders n'ont pas pu être convertis");
+                }
+
+                // Exporter en XML avec marquage automatique
+                await ExportTransferOrdersInBatches(winDevTransferOrders, originalIds, "TRANSFER_ORDERS_COSMETIQUE");
+
+                Console.WriteLine($"🎯 {winDevTransferOrders.Count} Transfer Orders marqués comme exportés");
+                stopwatch.Stop();
+                Console.WriteLine($"⏱️ Temps Transfer Orders : {stopwatch.ElapsedMilliseconds}ms");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Erreur lors de l'export des nouveaux Transfer Orders : {ex.Message}");
+                _logger.LogError(ex, "Erreur lors de l'export des nouveaux Transfer Orders");
+                throw;
+            }
+        }
+
+        /// <summary>
         /// Méthode utilitaire pour exporter les articles en gérant les lots
         /// </summary>
         private static async Task ExportArticlesInBatches(List<WinDevArticle> winDevArticles, List<int>? originalIds, string filePrefix)
@@ -686,6 +830,53 @@ namespace DynamicsToXmlTranslator
             }
         }
 
+        /// <summary>
+        /// Méthode utilitaire pour exporter les Transfer Orders en gérant les lots
+        /// </summary>
+        private static async Task ExportTransferOrdersInBatches(List<WinDevTransferOrder> winDevTransferOrders, List<int>? originalIds, string filePrefix)
+        {
+            Console.WriteLine("Export des Transfer Orders en fichier(s) XML...");
+            var batchSize = _configuration.GetValue<int>("XmlExport:BatchSize", 1000);
+
+            if (winDevTransferOrders.Count > batchSize)
+            {
+                // Export par lots
+                var files = await _transferOrderXmlExportService.ExportInBatchesAsync(winDevTransferOrders, originalIds, batchSize);
+                Console.WriteLine($"✓ Export terminé : {files.Count} fichiers créés");
+
+                foreach (var file in files)
+                {
+                    Console.WriteLine($"  📁 {Path.GetFileName(file)}");
+                }
+
+                // Enregistrer le log d'export
+                await _transferOrderDatabaseService.LogTransferOrderExportAsync(
+                    $"Export Transfer Orders ({files.Count} fichiers)",
+                    winDevTransferOrders.Count,
+                    "SUCCESS",
+                    $"{files.Count} fichiers générés"
+                );
+            }
+            else
+            {
+                // Export en un seul fichier
+                var filePath = await _transferOrderXmlExportService.ExportToXmlAsync(winDevTransferOrders, originalIds, filePrefix);
+                if (filePath != null)
+                {
+                    Console.WriteLine($"✓ Export terminé : {Path.GetFileName(filePath)}");
+                    Console.WriteLine($"  📁 Chemin complet : {filePath}");
+
+                    // Enregistrer le log d'export
+                    await _transferOrderDatabaseService.LogTransferOrderExportAsync(
+                        Path.GetFileName(filePath),
+                        winDevTransferOrders.Count,
+                        "SUCCESS",
+                        "Export Transfer Orders"
+                    );
+                }
+            }
+        }
+
         private static void SetupConfiguration()
         {
             _configuration = new ConfigurationBuilder()
@@ -748,6 +939,11 @@ namespace DynamicsToXmlTranslator
             _returnOrderDatabaseService = new ReturnOrderDatabaseService(_configuration, loggerFactory.CreateLogger<ReturnOrderDatabaseService>());
             _returnOrderXmlExportService = new ReturnOrderXmlExportService(_configuration, loggerFactory.CreateLogger<ReturnOrderXmlExportService>(), _returnOrderDatabaseService);
             _returnOrderMapper = new ReturnOrderMapper(_configuration, loggerFactory.CreateLogger<ReturnOrderMapper>());
+
+            // Services Transfer Orders
+            _transferOrderDatabaseService = new TransferOrderDatabaseService(_configuration, loggerFactory.CreateLogger<TransferOrderDatabaseService>());
+            _transferOrderXmlExportService = new TransferOrderXmlExportService(_configuration, loggerFactory.CreateLogger<TransferOrderXmlExportService>(), _transferOrderDatabaseService);
+            _transferOrderMapper = new TransferOrderMapper(_configuration, loggerFactory.CreateLogger<TransferOrderMapper>());
         }
     }
 }

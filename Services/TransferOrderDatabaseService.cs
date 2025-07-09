@@ -10,13 +10,13 @@ using System.Linq;
 
 namespace DynamicsToXmlTranslator.Services
 {
-    public class ReturnOrderDatabaseService
+    public class TransferOrderDatabaseService
     {
         private readonly IConfiguration _configuration;
-        private readonly ILogger<ReturnOrderDatabaseService> _logger;
+        private readonly ILogger<TransferOrderDatabaseService> _logger;
         private readonly string _connectionString;
 
-        public ReturnOrderDatabaseService(IConfiguration configuration, ILogger<ReturnOrderDatabaseService> logger)
+        public TransferOrderDatabaseService(IConfiguration configuration, ILogger<TransferOrderDatabaseService> logger)
         {
             _configuration = configuration;
             _logger = logger;
@@ -35,11 +35,11 @@ namespace DynamicsToXmlTranslator.Services
         }
 
         /// <summary>
-        /// Récupère tous les Return Orders de la base de données
+        /// Récupère tous les Transfer Orders de la base de données
         /// </summary>
-        public virtual async Task<List<ReturnOrder>> GetAllReturnOrdersAsync()
+        public virtual async Task<List<TransferOrder>> GetAllTransferOrdersAsync()
         {
-            var returnOrders = new List<ReturnOrder>();
+            var transferOrders = new List<TransferOrder>();
 
             try
             {
@@ -49,7 +49,6 @@ namespace DynamicsToXmlTranslator.Services
 
                     using (var command = connection.CreateCommand())
                     {
-                        // ✅ CORRIGÉ : Utilise le bon endpoint selon vos données
                         command.CommandText = @"
                             SELECT 
                                 JSON_KEYU,
@@ -63,7 +62,7 @@ namespace DynamicsToXmlTranslator.Services
                             FROM dbo.JSON_IN
                             WHERE (JSON_STAT = 'ACTIVE' OR JSON_STAT IS NULL OR JSON_STAT = 'DELETED')
                             AND (JSON_CCLI = 'BR' OR JSON_CCLI IS NULL)
-                            AND JSON_FROM = 'data/BRINT32ReturnOrderTables'
+                            AND JSON_FROM = 'data/BRINT32TransferOrderTables'
                             ORDER BY JSON_BKEY";
 
                         using (var reader = await command.ExecuteReaderAsync())
@@ -72,51 +71,51 @@ namespace DynamicsToXmlTranslator.Services
                             {
                                 try
                                 {
-                                    var returnOrder = new ReturnOrder
+                                    var transferOrder = new TransferOrder
                                     {
                                         Id = reader.GetInt32(0),
                                         JsonData = reader.GetString(1),
                                         ContentHash = reader.IsDBNull(2) ? "" : reader.GetString(2),
                                         ApiEndpoint = reader.IsDBNull(3) ? null : reader.GetString(3),
-                                        ReturnOrderId = ExtractReturnOrderIdFromBKey(reader.IsDBNull(4) ? null : reader.GetString(4)),
+                                        TransferOrderId = ExtractTransferOrderIdFromBKey(reader.IsDBNull(4) ? null : reader.GetString(4)),
                                         FirstSeenAt = reader.GetDateTime(5),
                                         LastUpdatedAt = reader.GetDateTime(6),
                                         UpdateCount = reader.GetInt32(7)
                                     };
 
-                                    if (!string.IsNullOrEmpty(returnOrder.JsonData))
+                                    if (!string.IsNullOrEmpty(transferOrder.JsonData))
                                     {
-                                        returnOrder.DynamicsData = JsonConvert.DeserializeObject<DynamicsReturnOrder>(returnOrder.JsonData);
+                                        transferOrder.DynamicsData = JsonConvert.DeserializeObject<DynamicsTransferOrder>(transferOrder.JsonData);
                                     }
 
-                                    returnOrders.Add(returnOrder);
+                                    transferOrders.Add(transferOrder);
                                 }
                                 catch (Exception ex)
                                 {
-                                    _logger.LogError(ex, $"Erreur lors de la lecture du Return Order ID: {reader.GetInt32(0)}");
+                                    _logger.LogError(ex, $"Erreur lors de la lecture du Transfer Order ID: {reader.GetInt32(0)}");
                                 }
                             }
                         }
                     }
                 }
 
-                _logger.LogInformation($"{returnOrders.Count} Return Orders récupérés de la base de données");
+                _logger.LogInformation($"{transferOrders.Count} Transfer Orders récupérés de la base de données");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erreur lors de la récupération des Return Orders");
+                _logger.LogError(ex, "Erreur lors de la récupération des Transfer Orders");
                 throw;
             }
 
-            return returnOrders;
+            return transferOrders;
         }
 
         /// <summary>
-        /// Récupère uniquement les Return Orders non exportés
+        /// Récupère uniquement les Transfer Orders non exportés
         /// </summary>
-        public async Task<List<ReturnOrder>> GetNonExportedReturnOrdersAsync()
+        public async Task<List<TransferOrder>> GetNonExportedTransferOrdersAsync()
         {
-            var returnOrders = new List<ReturnOrder>();
+            var transferOrders = new List<TransferOrder>();
 
             try
             {
@@ -139,7 +138,7 @@ namespace DynamicsToXmlTranslator.Services
                             FROM dbo.JSON_IN
                             WHERE (JSON_STAT = 'ACTIVE' OR JSON_STAT IS NULL OR JSON_STAT = 'DELETED')
                             AND (JSON_CCLI = 'BR' OR JSON_CCLI IS NULL)
-                            AND JSON_FROM = 'data/BRINT32ReturnOrderTables'
+                            AND JSON_FROM = 'data/BRINT32TransferOrderTables'
                             AND (JSON_TRTP = 0 OR JSON_TRTP IS NULL)
                             ORDER BY JSON_BKEY";
 
@@ -149,51 +148,51 @@ namespace DynamicsToXmlTranslator.Services
                             {
                                 try
                                 {
-                                    var returnOrder = new ReturnOrder
+                                    var transferOrder = new TransferOrder
                                     {
                                         Id = reader.GetInt32(0),
                                         JsonData = reader.GetString(1),
                                         ContentHash = reader.IsDBNull(2) ? "" : reader.GetString(2),
                                         ApiEndpoint = reader.IsDBNull(3) ? null : reader.GetString(3),
-                                        ReturnOrderId = ExtractReturnOrderIdFromBKey(reader.IsDBNull(4) ? null : reader.GetString(4)),
+                                        TransferOrderId = ExtractTransferOrderIdFromBKey(reader.IsDBNull(4) ? null : reader.GetString(4)),
                                         FirstSeenAt = reader.GetDateTime(5),
                                         LastUpdatedAt = reader.GetDateTime(6),
                                         UpdateCount = reader.GetInt32(7)
                                     };
 
-                                    if (!string.IsNullOrEmpty(returnOrder.JsonData))
+                                    if (!string.IsNullOrEmpty(transferOrder.JsonData))
                                     {
-                                        returnOrder.DynamicsData = JsonConvert.DeserializeObject<DynamicsReturnOrder>(returnOrder.JsonData);
+                                        transferOrder.DynamicsData = JsonConvert.DeserializeObject<DynamicsTransferOrder>(transferOrder.JsonData);
                                     }
 
-                                    returnOrders.Add(returnOrder);
+                                    transferOrders.Add(transferOrder);
                                 }
                                 catch (Exception ex)
                                 {
-                                    _logger.LogError(ex, $"Erreur lors de la lecture du Return Order ID: {reader.GetInt32(0)}");
+                                    _logger.LogError(ex, $"Erreur lors de la lecture du Transfer Order ID: {reader.GetInt32(0)}");
                                 }
                             }
                         }
                     }
                 }
 
-                _logger.LogInformation($"{returnOrders.Count} Return Orders non exportés récupérés");
+                _logger.LogInformation($"{transferOrders.Count} Transfer Orders non exportés récupérés");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erreur lors de la récupération des Return Orders non exportés");
+                _logger.LogError(ex, "Erreur lors de la récupération des Transfer Orders non exportés");
                 throw;
             }
 
-            return returnOrders;
+            return transferOrders;
         }
 
         /// <summary>
-        /// Marque les Return Orders comme exportés
+        /// Marque les Transfer Orders comme exportés
         /// </summary>
-        public async Task MarkReturnOrdersAsExportedAsync(List<int> returnOrderIds, string batchName)
+        public async Task MarkTransferOrdersAsExportedAsync(List<int> transferOrderIds, string batchName)
         {
-            if (returnOrderIds == null || !returnOrderIds.Any())
+            if (transferOrderIds == null || !transferOrderIds.Any())
             {
                 return;
             }
@@ -206,34 +205,34 @@ namespace DynamicsToXmlTranslator.Services
 
                     using (var command = connection.CreateCommand())
                     {
-                        var inClause = string.Join(",", returnOrderIds.Select(id => id.ToString()));
+                        var inClause = string.Join(",", transferOrderIds.Select(id => id.ToString()));
 
                         command.CommandText = $@"
                             UPDATE dbo.JSON_IN 
                             SET 
                                 JSON_TRTP = 1,
                                 JSON_TRDA = GETDATE(),
-                                JSON_TREN = 'SPEED_RO',
+                                JSON_TREN = 'SPEED_TO',
                                 JSON_SENT = 1
                             WHERE JSON_KEYU IN ({inClause})
-                            AND JSON_FROM = 'data/BRINT32ReturnOrderTables'";
+                            AND JSON_FROM = 'data/BRINT32TransferOrderTables'";
 
                         var updatedRows = await command.ExecuteNonQueryAsync();
-                        _logger.LogInformation($"{updatedRows} Return Orders marqués comme exportés");
+                        _logger.LogInformation($"{updatedRows} Transfer Orders marqués comme exportés");
                     }
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erreur lors du marquage des Return Orders comme exportés");
+                _logger.LogError(ex, "Erreur lors du marquage des Transfer Orders comme exportés");
                 throw;
             }
         }
 
         /// <summary>
-        /// Enregistre le log d'export des Return Orders
+        /// Enregistre le log d'export des Transfer Orders
         /// </summary>
-        public virtual async Task LogReturnOrderExportAsync(string fileName, int returnOrdersCount, string status, string? message = null)
+        public virtual async Task LogTransferOrderExportAsync(string fileName, int transferOrdersCount, string status, string? message = null)
         {
             try
             {
@@ -244,34 +243,34 @@ namespace DynamicsToXmlTranslator.Services
                     using (var command = connection.CreateCommand())
                     {
                         command.CommandText = @"
-                            IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'xml_return_export_logs')
+                            IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'xml_transfer_export_logs')
                             BEGIN
-                                CREATE TABLE xml_return_export_logs (
+                                CREATE TABLE xml_transfer_export_logs (
                                     id INT IDENTITY(1,1) PRIMARY KEY,
                                     file_name NVARCHAR(255),
-                                    return_orders_count INT DEFAULT 0,
+                                    transfer_orders_count INT DEFAULT 0,
                                     status NVARCHAR(20) DEFAULT 'SUCCESS',
                                     message NVARCHAR(MAX),
                                     export_date DATETIME2 DEFAULT GETDATE()
                                 )
                             END
                             
-                            INSERT INTO xml_return_export_logs (
+                            INSERT INTO xml_transfer_export_logs (
                                 file_name,
-                                return_orders_count,
+                                transfer_orders_count,
                                 status,
                                 message,
                                 export_date
                             ) VALUES (
                                 @fileName,
-                                @returnOrdersCount,
+                                @transferOrdersCount,
                                 @status,
                                 @message,
                                 GETDATE()
                             )";
 
                         command.Parameters.AddWithValue("@fileName", fileName);
-                        command.Parameters.AddWithValue("@returnOrdersCount", returnOrdersCount);
+                        command.Parameters.AddWithValue("@transferOrdersCount", transferOrdersCount);
                         command.Parameters.AddWithValue("@status", status);
                         command.Parameters.AddWithValue("@message", message ?? "");
 
@@ -281,28 +280,26 @@ namespace DynamicsToXmlTranslator.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erreur lors de l'enregistrement du log d'export Return Orders");
+                _logger.LogError(ex, "Erreur lors de l'enregistrement du log d'export Transfer Orders");
             }
         }
 
         /// <summary>
-        /// Extrait l'ID du Return Order depuis le JSON_BKEY
-        /// Selon votre exemple : "HASH_ECE1F4FBFB0A364D_1751977706"
+        /// Extrait l'ID du Transfer Order depuis le JSON_BKEY
         /// </summary>
-        private string? ExtractReturnOrderIdFromBKey(string? jsonBKey)
+        private string? ExtractTransferOrderIdFromBKey(string? jsonBKey)
         {
             if (string.IsNullOrEmpty(jsonBKey))
                 return null;
 
-            // Pour les Return Orders, utiliser le JSON_BKEY tel quel
-            // ou extraire une partie si nécessaire
+            // Pour les Transfer Orders, utiliser le JSON_BKEY tel quel
             return jsonBKey;
         }
 
         /// <summary>
-        /// Crée les tables nécessaires pour les Return Orders si elles n'existent pas
+        /// Crée les tables nécessaires pour les Transfer Orders si elles n'existent pas
         /// </summary>
-        public virtual async Task CreateReturnOrderTablesIfNotExistsAsync()
+        public virtual async Task CreateTransferOrderTablesIfNotExistsAsync()
         {
             try
             {
@@ -313,13 +310,13 @@ namespace DynamicsToXmlTranslator.Services
                     using (var command = connection.CreateCommand())
                     {
                         command.CommandText = @"
-                            -- Table de logs d'export XML Return Orders
-                            IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'xml_return_export_logs')
+                            -- Table de logs d'export XML Transfer Orders
+                            IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'xml_transfer_export_logs')
                             BEGIN
-                                CREATE TABLE xml_return_export_logs (
+                                CREATE TABLE xml_transfer_export_logs (
                                     id INT IDENTITY(1,1) PRIMARY KEY,
                                     file_name NVARCHAR(255),
-                                    return_orders_count INT DEFAULT 0,
+                                    transfer_orders_count INT DEFAULT 0,
                                     status NVARCHAR(20) DEFAULT 'SUCCESS',
                                     message NVARCHAR(MAX),
                                     export_date DATETIME2 DEFAULT GETDATE()
@@ -330,21 +327,21 @@ namespace DynamicsToXmlTranslator.Services
                     }
                 }
 
-                _logger.LogInformation("Tables Return Orders vérifiées/créées avec succès");
+                _logger.LogInformation("Tables Transfer Orders vérifiées/créées avec succès");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erreur lors de la vérification des tables Return Orders");
+                _logger.LogError(ex, "Erreur lors de la vérification des tables Transfer Orders");
                 throw;
             }
         }
 
         /// <summary>
-        /// Récupère les Return Orders depuis une date donnée
+        /// Récupère les Transfer Orders depuis une date donnée
         /// </summary>
-        public async Task<List<ReturnOrder>> GetReturnOrdersSinceDateAsync(DateTime sinceDate)
+        public async Task<List<TransferOrder>> GetTransferOrdersSinceDateAsync(DateTime sinceDate)
         {
-            var returnOrders = new List<ReturnOrder>();
+            var transferOrders = new List<TransferOrder>();
 
             try
             {
@@ -367,7 +364,7 @@ namespace DynamicsToXmlTranslator.Services
                             FROM dbo.JSON_IN
                             WHERE (JSON_STAT = 'ACTIVE' OR JSON_STAT IS NULL OR JSON_STAT = 'DELETED')
                             AND (JSON_CCLI = 'BR' OR JSON_CCLI IS NULL)
-                            AND JSON_FROM = 'data/BRINT32ReturnOrderTables'
+                            AND JSON_FROM = 'data/BRINT32TransferOrderTables'
                             AND JSON_CRDA >= @sinceDate
                             ORDER BY JSON_BKEY";
 
@@ -379,43 +376,43 @@ namespace DynamicsToXmlTranslator.Services
                             {
                                 try
                                 {
-                                    var returnOrder = new ReturnOrder
+                                    var transferOrder = new TransferOrder
                                     {
                                         Id = reader.GetInt32(0),
                                         JsonData = reader.GetString(1),
                                         ContentHash = reader.IsDBNull(2) ? "" : reader.GetString(2),
                                         ApiEndpoint = reader.IsDBNull(3) ? null : reader.GetString(3),
-                                        ReturnOrderId = ExtractReturnOrderIdFromBKey(reader.IsDBNull(4) ? null : reader.GetString(4)),
+                                        TransferOrderId = ExtractTransferOrderIdFromBKey(reader.IsDBNull(4) ? null : reader.GetString(4)),
                                         FirstSeenAt = reader.GetDateTime(5),
                                         LastUpdatedAt = reader.GetDateTime(6),
                                         UpdateCount = reader.GetInt32(7)
                                     };
 
-                                    if (!string.IsNullOrEmpty(returnOrder.JsonData))
+                                    if (!string.IsNullOrEmpty(transferOrder.JsonData))
                                     {
-                                        returnOrder.DynamicsData = JsonConvert.DeserializeObject<DynamicsReturnOrder>(returnOrder.JsonData);
+                                        transferOrder.DynamicsData = JsonConvert.DeserializeObject<DynamicsTransferOrder>(transferOrder.JsonData);
                                     }
 
-                                    returnOrders.Add(returnOrder);
+                                    transferOrders.Add(transferOrder);
                                 }
                                 catch (Exception ex)
                                 {
-                                    _logger.LogError(ex, $"Erreur lors de la lecture du Return Order ID: {reader.GetInt32(0)}");
+                                    _logger.LogError(ex, $"Erreur lors de la lecture du Transfer Order ID: {reader.GetInt32(0)}");
                                 }
                             }
                         }
                     }
                 }
 
-                _logger.LogInformation($"{returnOrders.Count} Return Orders récupérés depuis {sinceDate:yyyy-MM-dd HH:mm:ss}");
+                _logger.LogInformation($"{transferOrders.Count} Transfer Orders récupérés depuis {sinceDate:yyyy-MM-dd HH:mm:ss}");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erreur lors de la récupération des Return Orders par date");
+                _logger.LogError(ex, "Erreur lors de la récupération des Transfer Orders par date");
                 throw;
             }
 
-            return returnOrders;
+            return transferOrders;
         }
     }
 }
