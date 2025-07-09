@@ -35,49 +35,50 @@ namespace DynamicsToXmlTranslator.Mappers
                 var winDev = new WinDevReturnOrder
                 {
                     // ========== IDENTIFIANTS PRINCIPAUX ==========
-                    OpeCcli = dynamics.dataAreaId ?? "BR", // dataAreaId → OPE_DAT.OPE_CCLI (Société Référence)
-                    ReaRfce = dynamics.ReturnItemNum ?? "", // ReturnItemNum → REA_DAT.REA_RFCE (Expected Receipt Number)
-                    ReaRfti = dynamics.SalesId ?? "", // SalesId → REA_DAT.REA_RFTI (N° Commande Vente)
-                    ReaDalp = FormatDateForXml(dynamics.ReturnDeadline), // ReturnDeadline → REA_DAT.REA_DALP (Date de réception prévue)
+                    OpeCcli = dynamics.dataAreaId?.ToUpper() ?? "BR", // "br" → "BR"
+                    ReaRfce = dynamics.ReturnItemNum ?? "", // "OR000021" → REA_DAT.REA_RFCE
+                    ReaRfti = dynamics.SalesId ?? "", // "SO000191" → REA_DAT.REA_RFTI
+                    ReaDalp = FormatDateForXml(dynamics.ReturnDeadline), // "2025-06-30T12:00:00Z"
 
                     // ========== FOURNISSEUR/CLIENT ==========
-                    ReaCtaf = dynamics.CustAccount ?? "", // CustAccount → REA_DAT.REA_CTAF (Code tiers fournisseurs/Client)
-                    SalesName = dynamics.SalesName ?? "", // SalesName (Nom tiers fournisseurs/Client)
+                    ReaCtaf = dynamics.CustAccount ?? "", // "C0000002" → REA_DAT.REA_CTAF
+                    SalesName = dynamics.SalesName ?? "", // "ALMEDA ENTERPRISE COMPANY LTD"
 
                     // ========== DÉTAILS LIGNE ==========
-                    ReaNoLr = dynamics.LineNum, // LineNum → REA_DAT.REA_NoLR (Numéro ligne de commande)
-                    ArtCode = dynamics.ItemId ?? "", // ItemId → REA_DAT.ART_CODE (Référence article)
-                    ReaQtre = dynamics.ExpectedRetQty, // ExpectedRetQty → REA_DAT.REA_QTRE (Quantité prévue)
+                    ReaNoLr = dynamics.LineNum, // 1 → REA_DAT.REA_NoLR
+                    ArtCode = dynamics.ItemId ?? "", // "BAINP200" → REA_DAT.ART_CODE
+                    ReaQtre = dynamics.ExpectedRetQty, // 0 → REA_DAT.REA_QTRE
 
                     // ========== TRAÇABILITÉ (avec RG7 et RG8) ==========
-                    ReaLot1 = ApplyLotRule(dynamics.inventBatchId, dynamics.ItemId, 1), // RG7: Si article ART_PART.ART_LOT1=O
-                    ReaLot2 = ApplyLotRule(dynamics.inventSerialId, dynamics.ItemId, 2), // RG8: Si article ART_PART.ART_LOT2=O
-                    ReaDluo = FormatDateForXml(dynamics.expDate), // expDate → REA_DAT.REA_DLUO (DLUO)
+                    ReaLot1 = ApplyLotRule(dynamics.inventBatchId, dynamics.ItemId, 1), // "" → REA_DAT.REA_LOT1
+                    ReaLot2 = ApplyLotRule(dynamics.inventSerialId, dynamics.ItemId, 2), // "" → REA_DAT.REA_LOT2
+                    ReaDluo = FormatDateForXml(dynamics.expDate), // "1900-01-01T12:00:00Z"
 
                     // ========== SUPPORT ET COMMENTAIRES ==========
-                    ReaNoSu = "", // Numéro support (SSCC entrant) - pas dans le mapping source
-                    ReaCom = dynamics.Notes ?? "", // Notes → REA_DAT.REA_COM (Commentaires)
+                    ReaNoSu = "", // Numéro support - pas disponible dans vos données
+                    ReaCom = dynamics.Notes ?? "", // "" → REA_DAT.REA_COM
 
                     // ========== CODE QUALITÉ (RG4) ==========
-                    QuaCode = ApplyQualityCodeRule(dynamics.ReturnDispositionCodeID), // RG4: Code disposition vers code qualité
+                    QuaCode = ApplyQualityCodeRule(dynamics.ReturnDispositionCodeId), // ✅ CORRIGÉ: Id au lieu de ID
 
                     // ========== RÉFÉRENCE RÉSERVATION ==========
-                    ReaRfaf = "", // Référence réservation - pas dans le mapping source
+                    ReaRfaf = "", // Référence réservation - pas dans vos données
 
                     // ========== VALEURS FIXES ==========
-                    ActCode = "COSMETIQUE", // VALEUR FIXE = COSMETIQUE
-                    Ccli = "BR", // VALEUR FIXE = BR
+                    ActCode = "COSMETIQUE", // VALEUR FIXE
+                    Ccli = "BR", // VALEUR FIXE
 
                     // ========== CHAMPS AVEC RÈGLES DE GESTION ==========
-                    ReaAlpha5 = ApplyQualityControlRule(dynamics.ItemId), // RG5: Si catégorie = "PFRETAIL"
-                    ReaAlpha1 = ApplyReceptionTypeRule(dynamics.ReturnItemNum), // RG6: Si N° REA_NoSU alors 'DESADV'
-                    ReaAlpha11 = "NIVEAU3", // VALEUR FIXE = NIVEAU3
-                    ReaAlpha12 = "NORMAL", // VALEUR FIXE = NORMAL
+                    ReaAlpha5 = ApplyQualityControlRule(dynamics.ItemId), // RG5
+                    ReaAlpha1 = ApplyReceptionTypeRule(dynamics.ReturnItemNum), // RG6 : "OR000021" → "DESADV"
+                    ReaAlpha11 = "NIVEAU3", // VALEUR FIXE
+                    ReaAlpha12 = "NORMAL", // VALEUR FIXE
 
                     // ========== CHAMPS SUPPLÉMENTAIRES ==========
-                    SalesStatus = dynamics.SalesStatus ?? "", // Statut Commande Vente
-                    ReturnDispositionCodeId = dynamics.ReturnDispositionCodeID ?? "", // Code disposition
-                    InventLocationId = dynamics.InventLocationId ?? "" // Entrepot destinataire D365
+                    SalesStatus = dynamics.SalesStatus ?? "", // "Backorder"
+                    ReturnDispositionCodeId = dynamics.ReturnDispositionCodeId ?? "", // ✅ CORRIGÉ: Id au lieu de ID
+                    InventLocationId = dynamics.InventLocationId ?? "", // "12"
+                    
                 };
 
                 _logger.LogDebug($"Return Order mappé: {dynamics.SalesId} → REA_RFTI: {winDev.ReaRfti}");
@@ -92,7 +93,7 @@ namespace DynamicsToXmlTranslator.Mappers
 
         /// <summary>
         /// RG4: Code Qualité - 4 valeurs possibles => STD, BQLOG, BQQA1, BQQA2
-        /// Mapping depuis ReturnDispositionCodeID vers code qualité
+        /// Mapping depuis ReturnDispositionCodeId vers code qualité
         /// </summary>
         private string ApplyQualityCodeRule(string? dispositionCode)
         {
@@ -151,13 +152,18 @@ namespace DynamicsToXmlTranslator.Mappers
 
         /// <summary>
         /// Formate une date pour le XML (format compatible WINDEV)
+        /// Gère le cas spécial "1900-01-01T12:00:00Z" qui signifie "pas de date"
         /// </summary>
         private string FormatDateForXml(DateTime? date)
         {
             if (date == null || date == DateTime.MinValue)
                 return "";
 
-            // Format date pour WINDEV (à adapter selon vos besoins)
+            // Si la date est 1900-01-01, considérer comme vide
+            if (date.Value.Year == 1900)
+                return "";
+
+            // Format date pour WINDEV
             return date.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
         }
 
@@ -184,7 +190,7 @@ namespace DynamicsToXmlTranslator.Mappers
                 return false;
             }
 
-            if (dynamics.ExpectedRetQty <= 0)
+            if (dynamics.ExpectedRetQty < 0) // ✅ CORRIGÉ: Permet les quantités 0
             {
                 _logger.LogWarning($"Return Order {dynamics.SalesId} avec quantité invalide: {dynamics.ExpectedRetQty}");
                 return false;
@@ -214,7 +220,7 @@ namespace DynamicsToXmlTranslator.Mappers
                    $"  LineNum: {dynamics.LineNum} → REA_DAT.REA_NoLR\n" +
                    $"  ItemId: '{dynamics.ItemId}' → REA_DAT.ART_CODE\n" +
                    $"  ExpectedRetQty: {dynamics.ExpectedRetQty} → REA_DAT.REA_QTRE\n" +
-                   $"  ReturnDispositionCodeID: '{dynamics.ReturnDispositionCodeID}' → REA_DAT.QUA_CODE (RG4)\n" +
+                   $"  ReturnDispositionCodeId: '{dynamics.ReturnDispositionCodeId}' → REA_DAT.QUA_CODE (RG4)\n" + // ✅ CORRIGÉ
                    $"  ReceptionType: '{ApplyReceptionTypeRule(dynamics.ReturnItemNum)}' (RG6)\n" +
                    $"  ACT_CODE: 'COSMETIQUE' (fixe)\n" +
                    $"  CCLI: 'BR' (fixe)\n" +

@@ -28,6 +28,11 @@ namespace DynamicsToXmlTranslator
         private static PurchaseOrderXmlExportService _purchaseOrderXmlExportService;
         private static PurchaseOrderMapper _purchaseOrderMapper;
 
+        // Services Return Orders
+        private static ReturnOrderDatabaseService _returnOrderDatabaseService;
+        private static ReturnOrderXmlExportService _returnOrderXmlExportService;
+        private static ReturnOrderMapper _returnOrderMapper;
+
         static async Task Main(string[] args)
         {
             Console.WriteLine("=== Traducteur Dynamics vers XML WINDEV ===");
@@ -42,6 +47,7 @@ namespace DynamicsToXmlTranslator
 
                 // Vérifier/créer les tables nécessaires
                 await _databaseService.CreateTablesIfNotExistsAsync();
+                await _returnOrderDatabaseService.CreateReturnOrderTablesIfNotExistsAsync();
 
                 // Déterminer le mode d'exécution
                 bool isTestMode = IsTestMode(args);
@@ -64,6 +70,11 @@ namespace DynamicsToXmlTranslator
                     {
                         await ExportAllPurchaseOrdersTestMode();
                     }
+
+                    if (exportType == "returnorders" || exportType == "all")
+                    {
+                        await ExportAllReturnOrdersTestMode();
+                    }
                 }
                 else
                 {
@@ -78,6 +89,11 @@ namespace DynamicsToXmlTranslator
                     if (exportType == "purchaseorders" || exportType == "all")
                     {
                         await ExportNewPurchaseOrdersOnly();
+                    }
+
+                    if (exportType == "returnorders" || exportType == "all")
+                    {
+                        await ExportNewReturnOrdersOnly();
                     }
                 }
 
@@ -127,9 +143,14 @@ namespace DynamicsToXmlTranslator
             if (args.Length > 1)
             {
                 var exportType = args[1].ToLower();
-                if (exportType == "articles" || exportType == "purchaseorders" || exportType == "po")
+                if (exportType == "articles" || exportType == "purchaseorders" || exportType == "po" || exportType == "returnorders" || exportType == "ro")
                 {
-                    return exportType == "po" ? "purchaseorders" : exportType;
+                    return exportType switch
+                    {
+                        "po" => "purchaseorders",
+                        "ro" => "returnorders",
+                        _ => exportType
+                    };
                 }
             }
 
@@ -137,9 +158,14 @@ namespace DynamicsToXmlTranslator
             if (args.Length == 1 && !IsTestMode(args))
             {
                 var exportType = args[0].ToLower();
-                if (exportType == "articles" || exportType == "purchaseorders" || exportType == "po")
+                if (exportType == "articles" || exportType == "purchaseorders" || exportType == "po" || exportType == "returnorders" || exportType == "ro")
                 {
-                    return exportType == "po" ? "purchaseorders" : exportType;
+                    return exportType switch
+                    {
+                        "po" => "purchaseorders",
+                        "ro" => "returnorders",
+                        _ => exportType
+                    };
                 }
             }
 
@@ -272,6 +298,68 @@ namespace DynamicsToXmlTranslator
         }
 
         /// <summary>
+        /// Mode test : Export de tous les Return Orders SANS les marquer comme exportés
+        /// </summary>
+        private static async Task ExportAllReturnOrdersTestMode()
+        {
+            Console.WriteLine("\n🧪 MODE TEST - Export de tous les Return Orders");
+            var stopwatch = Stopwatch.StartNew();
+
+            try
+            {
+                // Récupérer TOUS les Return Orders
+                Console.WriteLine("Récupération de TOUS les Return Orders depuis la base de données...");
+                var returnOrders = await _returnOrderDatabaseService.GetAllReturnOrdersAsync();
+                Console.WriteLine($"✓ {returnOrders.Count} Return Orders trouvés (incluant ceux déjà exportés)");
+
+                if (returnOrders.Count == 0)
+                {
+                    Console.WriteLine("ℹ️ Aucun Return Order trouvé dans la base de données");
+                    return;
+                }
+
+                // Convertir les Return Orders
+                Console.WriteLine("Conversion des Return Orders au format WINDEV...");
+                var winDevReturnOrders = new List<WinDevReturnOrder>();
+                int erreurs = 0;
+
+                foreach (var returnOrder in returnOrders)
+                {
+                    var winDevReturnOrder = _returnOrderMapper.MapToWinDev(returnOrder);
+                    if (winDevReturnOrder != null)
+                    {
+                        winDevReturnOrders.Add(winDevReturnOrder);
+                    }
+                    else
+                    {
+                        erreurs++;
+                    }
+                }
+
+                Console.WriteLine($"✓ {winDevReturnOrders.Count} Return Orders convertis avec succès");
+                if (erreurs > 0)
+                {
+                    Console.WriteLine($"⚠️ {erreurs} Return Orders n'ont pas pu être convertis");
+                }
+
+                // Export en XML SANS marquer les Return Orders comme exportés
+                await ExportReturnOrdersInBatches(winDevReturnOrders, null, "RETURN_ORDERS_TEST_COMPLET");
+
+                Console.WriteLine($"🧪 MODE TEST : {winDevReturnOrders.Count} Return Orders exportés SANS marquage");
+                Console.WriteLine("⚠️ Les Return Orders ne sont PAS marqués comme exportés en mode test");
+
+                stopwatch.Stop();
+                Console.WriteLine($"⏱️ Temps Return Orders : {stopwatch.ElapsedMilliseconds}ms");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Erreur lors de l'export des Return Orders en mode test : {ex.Message}");
+                _logger.LogError(ex, "Erreur lors de l'export des Return Orders en mode test");
+                throw;
+            }
+        }
+
+        /// <summary>
         /// Mode production : Export des nouveaux articles uniquement avec marquage
         /// </summary>
         private static async Task ExportNewArticlesOnly()
@@ -396,6 +484,68 @@ namespace DynamicsToXmlTranslator
         }
 
         /// <summary>
+        /// Mode production : Export des nouveaux Return Orders uniquement avec marquage
+        /// </summary>
+        private static async Task ExportNewReturnOrdersOnly()
+        {
+            Console.WriteLine("\n🆕 Export des nouveaux Return Orders uniquement");
+            var stopwatch = Stopwatch.StartNew();
+
+            try
+            {
+                // Récupérer uniquement les Return Orders non exportés
+                Console.WriteLine("Récupération des nouveaux Return Orders depuis la base de données...");
+                var returnOrders = await _returnOrderDatabaseService.GetNonExportedReturnOrdersAsync();
+                Console.WriteLine($"✓ {returnOrders.Count} nouveaux Return Orders trouvés");
+
+                if (returnOrders.Count == 0)
+                {
+                    Console.WriteLine("ℹ️ Aucun nouveau Return Order à exporter");
+                    return;
+                }
+
+                // Convertir les Return Orders
+                Console.WriteLine("Conversion des Return Orders au format WINDEV...");
+                var winDevReturnOrders = new List<WinDevReturnOrder>();
+                var originalIds = new List<int>();
+                int erreurs = 0;
+
+                foreach (var returnOrder in returnOrders)
+                {
+                    var winDevReturnOrder = _returnOrderMapper.MapToWinDev(returnOrder);
+                    if (winDevReturnOrder != null)
+                    {
+                        winDevReturnOrders.Add(winDevReturnOrder);
+                        originalIds.Add(returnOrder.Id);
+                    }
+                    else
+                    {
+                        erreurs++;
+                    }
+                }
+
+                Console.WriteLine($"✓ {winDevReturnOrders.Count} Return Orders convertis avec succès");
+                if (erreurs > 0)
+                {
+                    Console.WriteLine($"⚠️ {erreurs} Return Orders n'ont pas pu être convertis");
+                }
+
+                // Exporter en XML avec marquage automatique
+                await ExportReturnOrdersInBatches(winDevReturnOrders, originalIds, "RETURN_ORDERS_COSMETIQUE");
+
+                Console.WriteLine($"🎯 {winDevReturnOrders.Count} Return Orders marqués comme exportés");
+                stopwatch.Stop();
+                Console.WriteLine($"⏱️ Temps Return Orders : {stopwatch.ElapsedMilliseconds}ms");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Erreur lors de l'export des nouveaux Return Orders : {ex.Message}");
+                _logger.LogError(ex, "Erreur lors de l'export des nouveaux Return Orders");
+                throw;
+            }
+        }
+
+        /// <summary>
         /// Méthode utilitaire pour exporter les articles en gérant les lots
         /// </summary>
         private static async Task ExportArticlesInBatches(List<WinDevArticle> winDevArticles, List<int>? originalIds, string filePrefix)
@@ -489,6 +639,53 @@ namespace DynamicsToXmlTranslator
             }
         }
 
+        /// <summary>
+        /// Méthode utilitaire pour exporter les Return Orders en gérant les lots
+        /// </summary>
+        private static async Task ExportReturnOrdersInBatches(List<WinDevReturnOrder> winDevReturnOrders, List<int>? originalIds, string filePrefix)
+        {
+            Console.WriteLine("Export des Return Orders en fichier(s) XML...");
+            var batchSize = _configuration.GetValue<int>("XmlExport:BatchSize", 1000);
+
+            if (winDevReturnOrders.Count > batchSize)
+            {
+                // Export par lots
+                var files = await _returnOrderXmlExportService.ExportInBatchesAsync(winDevReturnOrders, originalIds, batchSize);
+                Console.WriteLine($"✓ Export terminé : {files.Count} fichiers créés");
+
+                foreach (var file in files)
+                {
+                    Console.WriteLine($"  📁 {Path.GetFileName(file)}");
+                }
+
+                // Enregistrer le log d'export
+                await _returnOrderDatabaseService.LogReturnOrderExportAsync(
+                    $"Export Return Orders ({files.Count} fichiers)",
+                    winDevReturnOrders.Count,
+                    "SUCCESS",
+                    $"{files.Count} fichiers générés"
+                );
+            }
+            else
+            {
+                // Export en un seul fichier
+                var filePath = await _returnOrderXmlExportService.ExportToXmlAsync(winDevReturnOrders, originalIds, filePrefix);
+                if (filePath != null)
+                {
+                    Console.WriteLine($"✓ Export terminé : {Path.GetFileName(filePath)}");
+                    Console.WriteLine($"  📁 Chemin complet : {filePath}");
+
+                    // Enregistrer le log d'export
+                    await _returnOrderDatabaseService.LogReturnOrderExportAsync(
+                        Path.GetFileName(filePath),
+                        winDevReturnOrders.Count,
+                        "SUCCESS",
+                        "Export Return Orders"
+                    );
+                }
+            }
+        }
+
         private static void SetupConfiguration()
         {
             _configuration = new ConfigurationBuilder()
@@ -546,6 +743,11 @@ namespace DynamicsToXmlTranslator
             _purchaseOrderDatabaseService = new PurchaseOrderDatabaseService(_configuration, loggerFactory.CreateLogger<PurchaseOrderDatabaseService>());
             _purchaseOrderXmlExportService = new PurchaseOrderXmlExportService(_configuration, loggerFactory.CreateLogger<PurchaseOrderXmlExportService>(), _purchaseOrderDatabaseService);
             _purchaseOrderMapper = new PurchaseOrderMapper(_configuration, loggerFactory.CreateLogger<PurchaseOrderMapper>());
+
+            // Services Return Orders
+            _returnOrderDatabaseService = new ReturnOrderDatabaseService(_configuration, loggerFactory.CreateLogger<ReturnOrderDatabaseService>());
+            _returnOrderXmlExportService = new ReturnOrderXmlExportService(_configuration, loggerFactory.CreateLogger<ReturnOrderXmlExportService>(), _returnOrderDatabaseService);
+            _returnOrderMapper = new ReturnOrderMapper(_configuration, loggerFactory.CreateLogger<ReturnOrderMapper>());
         }
     }
 }
