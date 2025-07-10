@@ -450,5 +450,175 @@ namespace DynamicsToXmlTranslator.Services
             // Sinon on retourne tel quel
             return jsonBKey;
         }
+
+        /// <summary>
+        /// ✅ NOUVELLE MÉTHODE : Obtient des statistiques sur les articles par statut
+        /// Utile pour comprendre la répartition des ART_STAT
+        /// </summary>
+        public async Task<Dictionary<string, int>> GetArticleStatisticsAsync()
+        {
+            var statistics = new Dictionary<string, int>
+            {
+                ["Total"] = 0,
+                ["ART_STAT_2"] = 0,
+                ["ART_STAT_3"] = 0,
+                ["ART_STAT_Unknown"] = 0
+            };
+
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+
+                    using (var command = connection.CreateCommand())
+                    {
+                        command.CommandText = @"
+                            SELECT 
+                                JSON_DATA
+                            FROM dbo.JSON_IN
+                            WHERE (JSON_STAT = 'ACTIVE' OR JSON_STAT IS NULL)
+                            AND (JSON_CCLI = 'BR' OR JSON_CCLI IS NULL)
+                            AND JSON_FROM = 'data/BRINT34ReleasedProducts'";
+
+                        using (var reader = await command.ExecuteReaderAsync())
+                        {
+                            while (await reader.ReadAsync())
+                            {
+                                try
+                                {
+                                    statistics["Total"]++;
+
+                                    var jsonData = reader.GetString(0);
+                                    var dynamicsArticle = JsonConvert.DeserializeObject<DynamicsArticle>(jsonData);
+
+                                    if (dynamicsArticle != null)
+                                    {
+                                        // Calculer ART_STAT selon la logique du mapper
+                                        string artStat = ConvertProductLifecycleStateForStats(dynamicsArticle.ProductLifecycleStateId);
+
+                                        switch (artStat)
+                                        {
+                                            case "2":
+                                                statistics["ART_STAT_2"]++;
+                                                break;
+                                            case "3":
+                                                statistics["ART_STAT_3"]++;
+                                                break;
+                                            default:
+                                                statistics["ART_STAT_Unknown"]++;
+                                                break;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        statistics["ART_STAT_Unknown"]++;
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    _logger.LogWarning(ex, "Erreur lors de l'analyse d'un article pour les statistiques");
+                                    statistics["ART_STAT_Unknown"]++;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                _logger.LogInformation("Statistiques articles calculées: " +
+                    $"Total={statistics["Total"]}, " +
+                    $"ART_STAT_2={statistics["ART_STAT_2"]}, " +
+                    $"ART_STAT_3={statistics["ART_STAT_3"]}, " +
+                    $"Unknown={statistics["ART_STAT_Unknown"]}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erreur lors du calcul des statistiques articles");
+            }
+
+            return statistics;
+        }
+
+        /// <summary>
+        /// ✅ NOUVELLE MÉTHODE : Convertit ProductLifecycleStateId selon la même logique que le mapper
+        /// </summary>
+        private string ConvertProductLifecycleStateForStats(string? lifecycleState)
+        {
+            if (string.IsNullOrEmpty(lifecycleState))
+                return "3";
+
+            string cleanState = lifecycleState.ToUpper().Trim();
+
+            return cleanState switch
+            {
+                "NON" or "NO" => "2",
+                _ => "3"
+            };
+        }
+
+        /// <summary>
+        /// ✅ NOUVELLE MÉTHODE : Enregistre le log d'export avec détails sur les exclusions
+        /// </summary>
+        public virtual async Task LogExportWithExclusionsAsync(string fileName, int exportedCount, int excludedCount, string status, string? message = null)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+
+                    using (var command = connection.CreateCommand())
+                    {
+                        command.CommandText = @"
+                            IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'xml_export_logs')
+                            BEGIN
+                                CREATE TABLE xml_export_logs (
+                                    id INT IDENTITY(1,1) PRIMARY KEY,
+                                    file_name NVARCHAR(255),
+                                    articles_count INT DEFAULT 0,
+                                    excluded_count INT DEFAULT 0,
+                                    status NVARCHAR(20) DEFAULT 'SUCCESS',
+                                    message NVARCHAR(MAX),
+                                    export_date DATETIME2 DEFAULT GETDATE()
+                                )
+                            END
+                            
+                            -- Ajouter la colonne excluded_count si elle n'existe pas
+                            IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'xml_export_logs' AND COLUMN_NAME = 'excluded_count')
+                            BEGIN
+                                ALTER TABLE xml_export_logs ADD excluded_count INT DEFAULT 0
+                            END
+                            
+                            INSERT INTO xml_export_logs (
+                                file_name,
+                                articles_count,
+                                excluded_count,
+                                status,
+                                message,
+                                export_date
+                            ) VALUES (
+                                @fileName,
+                                @exportedCount,
+                                @excludedCount,
+                                @status,
+                                @message,
+                                GETDATE()
+                            )";
+
+                        command.Parameters.AddWithValue("@fileName", fileName);
+                        command.Parameters.AddWithValue("@exportedCount", exportedCount);
+                        command.Parameters.AddWithValue("@excludedCount", excludedCount);
+                        command.Parameters.AddWithValue("@status", status);
+                        command.Parameters.AddWithValue("@message", message ?? "");
+
+                        await command.ExecuteNonQueryAsync();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erreur lors de l'enregistrement du log d'export avec exclusions");
+            }
+        }
     }
 }

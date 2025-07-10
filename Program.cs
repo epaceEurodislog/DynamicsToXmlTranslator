@@ -43,7 +43,7 @@ namespace DynamicsToXmlTranslator
 
         static async Task Main(string[] args)
         {
-            Console.WriteLine("=== Traducteur Dynamics vers XML WINDEV (avec UTF-8) ===");
+            Console.WriteLine("=== Traducteur Dynamics vers XML WINDEV (avec UTF-8 + exclusion ART_STAT=3) ===");
             Console.WriteLine($"Démarrage automatique : {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
 
             try
@@ -53,14 +53,18 @@ namespace DynamicsToXmlTranslator
                 SetupLogging();
                 SetupServices();
 
-                // ✅ NOUVEAU : Log des informations UTF-8
+                // ✅ NOUVEAU : Log des informations UTF-8 + exclusion
                 _logger.LogInformation("✅ Service de traitement UTF-8 initialisé");
+                _logger.LogInformation("✅ Règle d'exclusion ART_STAT=3 activée");
                 _logger.LogInformation("Tous les champs texte seront normalisés pour la compatibilité XML");
 
                 // Vérifier/créer les tables nécessaires
                 await _databaseService.CreateTablesIfNotExistsAsync();
                 await _returnOrderDatabaseService.CreateReturnOrderTablesIfNotExistsAsync();
                 await _transferOrderDatabaseService.CreateTransferOrderTablesIfNotExistsAsync();
+
+                // ✅ NOUVEAU : Afficher les statistiques avant traitement
+                await DisplayArticleStatistics();
 
                 // Déterminer le mode d'exécution
                 bool isTestMode = IsTestMode(args);
@@ -69,11 +73,12 @@ namespace DynamicsToXmlTranslator
                 Console.WriteLine($"Mode: {(isTestMode ? "TEST" : "PRODUCTION")}");
                 Console.WriteLine($"Export: {exportType.ToUpper()}");
                 Console.WriteLine("✅ Traitement UTF-8 activé pour tous les champs texte");
+                Console.WriteLine("🚫 Articles ART_STAT=3 exclus automatiquement");
 
                 if (isTestMode)
                 {
                     Console.WriteLine("🧪 MODE TEST ACTIVÉ");
-                    _logger.LogInformation("Mode test activé - export sans marquage avec traitement UTF-8");
+                    _logger.LogInformation("Mode test activé - export sans marquage avec traitement UTF-8 et exclusion ART_STAT=3");
 
                     if (exportType == "articles" || exportType == "all")
                     {
@@ -98,7 +103,7 @@ namespace DynamicsToXmlTranslator
                 else
                 {
                     Console.WriteLine("🔄 MODE PRODUCTION - Nouveaux éléments uniquement");
-                    _logger.LogInformation("Mode production - export des nouveaux éléments uniquement avec traitement UTF-8");
+                    _logger.LogInformation("Mode production - export des nouveaux éléments uniquement avec traitement UTF-8 et exclusion ART_STAT=3");
 
                     if (exportType == "articles" || exportType == "all")
                     {
@@ -121,8 +126,8 @@ namespace DynamicsToXmlTranslator
                     }
                 }
 
-                Console.WriteLine("\n✅ Export terminé avec succès (avec traitement UTF-8)");
-                _logger.LogInformation("Export automatique terminé avec succès - tous les caractères spéciaux traités");
+                Console.WriteLine("\n✅ Export terminé avec succès (avec traitement UTF-8 et exclusion ART_STAT=3)");
+                _logger.LogInformation("Export automatique terminé avec succès - tous les caractères spéciaux traités et articles ART_STAT=3 exclus");
             }
             catch (Exception ex)
             {
@@ -135,6 +140,37 @@ namespace DynamicsToXmlTranslator
             {
                 // Fermer les logs proprement
                 Log.CloseAndFlush();
+            }
+        }
+
+        /// <summary>
+        /// ✅ NOUVELLE MÉTHODE : Affiche des statistiques détaillées sur les articles
+        /// </summary>
+        private static async Task DisplayArticleStatistics()
+        {
+            try
+            {
+                Console.WriteLine("\n📊 Analyse des articles dans la base de données...");
+                var statistics = await _databaseService.GetArticleStatisticsAsync();
+
+                Console.WriteLine("=== STATISTIQUES ARTICLES ===");
+                Console.WriteLine($"📋 Total articles : {statistics["Total"]}");
+                Console.WriteLine($"✅ Articles ART_STAT=2 (exportables) : {statistics["ART_STAT_2"]}");
+                Console.WriteLine($"🚫 Articles ART_STAT=3 (exclus) : {statistics["ART_STAT_3"]}");
+                Console.WriteLine($"❓ Articles statut inconnu : {statistics["ART_STAT_Unknown"]}");
+
+                if (statistics["Total"] > 0)
+                {
+                    double excludedPercentage = (double)statistics["ART_STAT_3"] / statistics["Total"] * 100;
+                    Console.WriteLine($"📈 Pourcentage d'exclusion : {excludedPercentage:F1}%");
+                }
+
+                Console.WriteLine("==============================\n");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"⚠️ Impossible d'afficher les statistiques : {ex.Message}");
+                _logger.LogWarning(ex, "Erreur lors de l'affichage des statistiques");
             }
         }
 
@@ -203,11 +239,11 @@ namespace DynamicsToXmlTranslator
 
         /// <summary>
         /// Mode test : Export de tous les articles SANS les marquer comme exportés
-        /// AVEC traitement UTF-8
+        /// AVEC traitement UTF-8 ET exclusion des articles ART_STAT=3
         /// </summary>
         private static async Task ExportAllArticlesTestMode()
         {
-            Console.WriteLine("\n🧪 MODE TEST - Export de tous les articles (avec UTF-8)");
+            Console.WriteLine("\n🧪 MODE TEST - Export de tous les articles (avec UTF-8 + exclusion ART_STAT=3)");
             var stopwatch = Stopwatch.StartNew();
 
             try
@@ -223,14 +259,22 @@ namespace DynamicsToXmlTranslator
                     return;
                 }
 
-                // Convertir les articles avec traitement UTF-8
-                Console.WriteLine("Conversion des articles au format WINDEV (avec traitement UTF-8)...");
+                // Convertir les articles avec traitement UTF-8 ET exclusion ART_STAT=3
+                Console.WriteLine("Conversion des articles au format WINDEV (avec UTF-8 + exclusion ART_STAT=3)...");
                 var winDevArticles = new List<WinDevArticle>();
                 int erreurs = 0;
                 int utf8Transformations = 0;
+                int articlesExclus = 0; // ✅ NOUVEAU : Compteur d'exclusions
 
                 foreach (var article in articles)
                 {
+                    // ✅ NOUVELLE RÈGLE : Vérifier si l'article doit être exclu
+                    if (_articleMapper.ShouldExcludeArticle(article))
+                    {
+                        articlesExclus++;
+                        continue; // Passer au suivant sans traiter
+                    }
+
                     var winDevArticle = _articleMapper.MapToWinDev(article);
                     if (winDevArticle != null)
                     {
@@ -250,15 +294,16 @@ namespace DynamicsToXmlTranslator
 
                 Console.WriteLine($"✓ {winDevArticles.Count} articles convertis avec succès");
                 Console.WriteLine($"✅ {utf8Transformations} articles avec transformations UTF-8 appliquées");
+                Console.WriteLine($"🚫 {articlesExclus} articles exclus (ART_STAT=3)"); // ✅ NOUVEAU : Affichage exclusions
                 if (erreurs > 0)
                 {
                     Console.WriteLine($"⚠️ {erreurs} articles n'ont pas pu être convertis");
                 }
 
                 // Export en XML SANS marquer les articles comme exportés
-                await ExportArticlesInBatches(winDevArticles, null, "ARTICLE_TEST_COMPLET_UTF8");
+                await ExportArticlesInBatches(winDevArticles, null, "ARTICLE_TEST_COMPLET", articlesExclus);
 
-                Console.WriteLine($"🧪 MODE TEST : {winDevArticles.Count} articles exportés SANS marquage (UTF-8 traité)");
+                Console.WriteLine($"🧪 MODE TEST : {winDevArticles.Count} articles exportés SANS marquage (UTF-8 traité, ART_STAT=3 exclus)");
                 Console.WriteLine("⚠️ Les articles ne sont PAS marqués comme exportés en mode test");
 
                 stopwatch.Stop();
@@ -274,11 +319,11 @@ namespace DynamicsToXmlTranslator
 
         /// <summary>
         /// Mode production : Export des nouveaux articles uniquement avec marquage
-        /// AVEC traitement UTF-8
+        /// AVEC traitement UTF-8 ET exclusion des articles ART_STAT=3
         /// </summary>
         private static async Task ExportNewArticlesOnly()
         {
-            Console.WriteLine("\n🆕 Export des nouveaux articles uniquement (avec UTF-8)");
+            Console.WriteLine("\n🆕 Export des nouveaux articles uniquement (avec UTF-8 + exclusion ART_STAT=3)");
             var stopwatch = Stopwatch.StartNew();
 
             try
@@ -294,15 +339,25 @@ namespace DynamicsToXmlTranslator
                     return;
                 }
 
-                // Convertir les articles avec traitement UTF-8
-                Console.WriteLine("Conversion des articles au format WINDEV (avec traitement UTF-8)...");
+                // Convertir les articles avec traitement UTF-8 ET exclusion ART_STAT=3
+                Console.WriteLine("Conversion des articles au format WINDEV (avec UTF-8 + exclusion ART_STAT=3)...");
                 var winDevArticles = new List<WinDevArticle>();
                 var originalIds = new List<int>();
+                var excludedIds = new List<int>(); // ✅ NOUVEAU : IDs des articles exclus
                 int erreurs = 0;
                 int utf8Transformations = 0;
+                int articlesExclus = 0;
 
                 foreach (var article in articles)
                 {
+                    // ✅ NOUVELLE RÈGLE : Vérifier si l'article doit être exclu
+                    if (_articleMapper.ShouldExcludeArticle(article))
+                    {
+                        articlesExclus++;
+                        excludedIds.Add(article.Id); // Conserver l'ID pour marquage potentiel
+                        continue;
+                    }
+
                     var winDevArticle = _articleMapper.MapToWinDev(article);
                     if (winDevArticle != null)
                     {
@@ -323,15 +378,27 @@ namespace DynamicsToXmlTranslator
 
                 Console.WriteLine($"✓ {winDevArticles.Count} articles convertis avec succès");
                 Console.WriteLine($"✅ {utf8Transformations} articles avec transformations UTF-8 appliquées");
+                Console.WriteLine($"🚫 {articlesExclus} articles exclus (ART_STAT=3)");
                 if (erreurs > 0)
                 {
                     Console.WriteLine($"⚠️ {erreurs} articles n'ont pas pu être convertis");
                 }
 
-                // Exporter en XML avec marquage automatique
-                await ExportArticlesInBatches(winDevArticles, originalIds, "ARTICLE_COSMETIQUE_UTF8");
+                // Exporter en XML avec marquage automatique (seulement les articles traités)
+                if (winDevArticles.Count > 0)
+                {
+                    await ExportArticlesInBatches(winDevArticles, originalIds, "ARTICLE_COSMETIQUE");
+                    Console.WriteLine($"🎯 {winDevArticles.Count} articles marqués comme exportés (UTF-8 traité, ART_STAT=3 exclus)");
+                }
 
-                Console.WriteLine($"🎯 {winDevArticles.Count} articles marqués comme exportés (UTF-8 traité)");
+                // ✅ NOUVEAU : Marquer également les articles exclus pour éviter qu'ils soient retraités
+                if (excludedIds.Count > 0)
+                {
+                    await _databaseService.MarkArticlesAsExportedAsync(excludedIds, "EXCLUDED_ART_STAT_3");
+                    Console.WriteLine($"🚫 {excludedIds.Count} articles exclus marqués comme traités");
+                    _logger.LogInformation($"{excludedIds.Count} articles avec ART_STAT=3 marqués comme exclus");
+                }
+
                 stopwatch.Stop();
                 Console.WriteLine($"⏱️ Temps articles : {stopwatch.ElapsedMilliseconds}ms");
             }
@@ -777,9 +844,9 @@ namespace DynamicsToXmlTranslator
         // ========== MÉTHODES D'EXPORT EN LOTS ==========
 
         /// <summary>
-        /// Méthode utilitaire pour exporter les articles en gérant les lots
+        /// ✅ MODIFIÉ : Méthode utilitaire pour exporter les articles en gérant les lots ET les exclusions ART_STAT=3
         /// </summary>
-        private static async Task ExportArticlesInBatches(List<WinDevArticle> winDevArticles, List<int>? originalIds, string filePrefix)
+        private static async Task ExportArticlesInBatches(List<WinDevArticle> winDevArticles, List<int>? originalIds, string filePrefix, int excludedCount = 0)
         {
             Console.WriteLine("Export des articles en fichier(s) XML...");
             var batchSize = _configuration.GetValue<int>("XmlExport:BatchSize", 1000);
@@ -794,27 +861,38 @@ namespace DynamicsToXmlTranslator
                     Console.WriteLine($"  📁 {Path.GetFileName(file)}");
                 }
 
-                await _databaseService.LogExportAsync(
+                // ✅ NOUVEAU : Affichage du résumé avec exclusions
+                if (excludedCount > 0)
+                {
+                    Console.WriteLine($"  🚫 {excludedCount} articles exclus (ART_STAT=3)");
+                }
+
+                // ✅ MODIFIÉ : Utilisation de la nouvelle méthode avec exclusions
+                await _databaseService.LogExportWithExclusionsAsync(
                     $"Export articles ({files.Count} fichiers)",
                     winDevArticles.Count,
+                    excludedCount,
                     "SUCCESS",
-                    $"{files.Count} fichiers générés avec UTF-8"
+                    $"{files.Count} fichiers générés avec UTF-8, {excludedCount} articles exclus (ART_STAT=3)"
                 );
             }
             else
             {
-                var filePath = await _xmlExportService.ExportToXmlAsync(winDevArticles, originalIds, filePrefix);
+                // ✅ MODIFIÉ : Passage du paramètre excludedCount
+                var filePath = await _xmlExportService.ExportToXmlAsync(winDevArticles, originalIds, filePrefix, excludedCount);
                 if (filePath != null)
                 {
                     Console.WriteLine($"✓ Export terminé : {Path.GetFileName(filePath)}");
                     Console.WriteLine($"  📁 Chemin complet : {filePath}");
 
-                    await _databaseService.LogExportAsync(
-                        Path.GetFileName(filePath),
-                        winDevArticles.Count,
-                        "SUCCESS",
-                        "Export articles avec UTF-8"
-                    );
+                    // ✅ NOUVEAU : Affichage du résumé avec exclusions
+                    if (excludedCount > 0)
+                    {
+                        Console.WriteLine($"  🚫 {excludedCount} articles exclus (ART_STAT=3)");
+                    }
+
+                    // ✅ NOTE : Le log est maintenant fait automatiquement dans ExportToXmlAsync
+                    // avec la nouvelle méthode LogExportWithExclusionsAsync
                 }
             }
         }

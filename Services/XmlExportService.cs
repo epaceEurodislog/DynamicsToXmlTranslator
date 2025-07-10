@@ -37,13 +37,26 @@ namespace DynamicsToXmlTranslator.Services
         }
 
         /// <summary>
-        /// Exporte une liste d'articles WINDEV en fichier XML
+        /// ✅ MODIFIÉ : Exporte une liste d'articles WINDEV en fichier XML avec log des exclusions
         /// </summary>
-        public async Task<string?> ExportToXmlAsync(List<WinDevArticle> articles, List<int> originalArticleIds = null, string fileNamePrefix = "ARTICLE_COSMETIQUE")
+        public async Task<string?> ExportToXmlAsync(List<WinDevArticle> articles, List<int> originalArticleIds = null, string fileNamePrefix = "ARTICLE_COSMETIQUE", int excludedCount = 0)
         {
             if (articles == null || !articles.Any())
             {
                 _logger.LogWarning("Aucun article à exporter");
+
+                // Log même quand aucun article à exporter pour traçabilité
+                if (excludedCount > 0)
+                {
+                    await _databaseService.LogExportWithExclusionsAsync(
+                        "NO_EXPORT_ALL_EXCLUDED",
+                        0,
+                        excludedCount,
+                        "INFO",
+                        $"Tous les articles ({excludedCount}) ont été exclus (ART_STAT=3)"
+                    );
+                }
+
                 return null;
             }
 
@@ -88,7 +101,7 @@ namespace DynamicsToXmlTranslator.Services
                 // ✅ NOUVEAU : Post-traitement pour forcer les balises fermantes
                 await ForceClosingTagsAsync(filePath);
 
-                _logger.LogInformation($"Export XML réussi : {fileName} ({articles.Count} articles)");
+                _logger.LogInformation($"Export XML réussi : {fileName} ({articles.Count} articles exportés, {excludedCount} exclus)");
 
                 // Marquer les articles comme exportés
                 if (originalArticleIds != null && originalArticleIds.Any())
@@ -96,11 +109,30 @@ namespace DynamicsToXmlTranslator.Services
                     await _databaseService.MarkArticlesAsExportedAsync(originalArticleIds, fileName);
                 }
 
+                // ✅ NOUVEAU : Log avec détails sur les exclusions
+                await _databaseService.LogExportWithExclusionsAsync(
+                    fileName,
+                    articles.Count,
+                    excludedCount,
+                    "SUCCESS",
+                    $"Export réussi avec {excludedCount} articles exclus (ART_STAT=3)"
+                );
+
                 return filePath;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Erreur lors de l'export XML");
+
+                // Log de l'erreur avec les exclusions
+                await _databaseService.LogExportWithExclusionsAsync(
+                    "ERROR_EXPORT",
+                    0,
+                    excludedCount,
+                    "ERROR",
+                    $"Erreur: {ex.Message}"
+                );
+
                 throw;
             }
         }

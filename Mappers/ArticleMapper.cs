@@ -31,6 +31,13 @@ namespace DynamicsToXmlTranslator.Mappers
                 return null;
             }
 
+            // ✅ NOUVELLE RÈGLE : Vérifier si l'article doit être exclu selon ART_STAT
+            if (ShouldExcludeArticle(article))
+            {
+                _logger.LogDebug($"Article {article.DynamicsData.ItemId} exclu car ART_STAT = 3");
+                return null;
+            }
+
             try
             {
                 var dynamics = article.DynamicsData;
@@ -129,7 +136,7 @@ namespace DynamicsToXmlTranslator.Mappers
                     LogProcessingStats(dynamics, winDev);
                 }
 
-                _logger.LogDebug($"Article mappé: {dynamics.ItemId} → Code: {winDev.ArtCode}, Catégorie: {dynamics.Category} → {winDev.ArtAlpha17}");
+                _logger.LogDebug($"Article mappé: {dynamics.ItemId} → Code: {winDev.ArtCode}, Catégorie: {dynamics.Category} → {winDev.ArtAlpha17}, ART_STAT: {winDev.ArtStat}");
                 return winDev;
             }
             catch (Exception ex)
@@ -137,6 +144,31 @@ namespace DynamicsToXmlTranslator.Mappers
                 _logger.LogError(ex, $"Erreur lors du mapping de l'article {article.ItemId}");
                 return null;
             }
+        }
+
+        /// <summary>
+        /// ✅ NOUVELLE RÈGLE : Détermine si un article doit être exclu selon ART_STAT
+        /// Les articles avec ART_STAT = "3" ne doivent pas être exportés
+        /// </summary>
+        public bool ShouldExcludeArticle(Article article)
+        {
+            if (article?.DynamicsData == null)
+                return true;
+
+            var dynamics = article.DynamicsData;
+
+            // Calculer ART_STAT selon la logique existante
+            string artStat = ConvertProductLifecycleState(dynamics.ProductLifecycleStateId);
+
+            // Exclure si ART_STAT = "3"
+            bool shouldExclude = artStat == "3";
+
+            if (shouldExclude)
+            {
+                _logger.LogInformation($"Article {dynamics.ItemId} exclu de l'export (ART_STAT=3, ProductLifecycleStateId='{dynamics.ProductLifecycleStateId}')");
+            }
+
+            return shouldExclude;
         }
 
         /// <summary>
@@ -280,7 +312,9 @@ namespace DynamicsToXmlTranslator.Mappers
                    $"  FactorPallet: {dynamics.FactorPallet} → ART_PAR.ART_QTEP (RG8)\n" +
                    $"  PdsShelfLife: {dynamics.PdsShelfLife} → ART_PAR.ART_NUM19 (RG10: 1620 si vide)\n" +
                    $"  ProducVersionAttribute: '{dynamics.ProducVersionAttribute}' → ART_PAR.ART_TOP1 (traité UTF-8)\n" +
+                   $"  ProductLifecycleStateId: '{dynamics.ProductLifecycleStateId}' → ART_STAT: '{ConvertProductLifecycleState(dynamics.ProductLifecycleStateId)}'\n" +
                    $"  ACT_CODE: 'COSMETIQUE' (fixe)\n" +
+                   $"  ✅ EXCLUSION: Articles avec ART_STAT=3 ne sont PAS exportés\n" +
                    $"  ✅ TOUS LES CHAMPS TEXTE TRAITÉS AVEC NORMALISATION UTF-8";
         }
     }
