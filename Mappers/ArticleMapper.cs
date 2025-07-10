@@ -1,5 +1,6 @@
 using System;
 using DynamicsToXmlTranslator.Models;
+using DynamicsToXmlTranslator.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
@@ -9,15 +10,18 @@ namespace DynamicsToXmlTranslator.Mappers
     {
         private readonly IConfiguration _configuration;
         private readonly ILogger<ArticleMapper> _logger;
+        private readonly Utf8TextProcessor _textProcessor;
 
-        public ArticleMapper(IConfiguration configuration, ILogger<ArticleMapper> logger)
+        public ArticleMapper(IConfiguration configuration, ILogger<ArticleMapper> logger, Utf8TextProcessor textProcessor)
         {
             _configuration = configuration;
             _logger = logger;
+            _textProcessor = textProcessor;
         }
 
         /// <summary>
         /// Convertit un article Dynamics en article WINDEV selon la correspondance Excel
+        /// AVEC traitement UTF-8 des caractères spéciaux
         /// </summary>
         public WinDevArticle? MapToWinDev(Article article)
         {
@@ -35,70 +39,95 @@ namespace DynamicsToXmlTranslator.Mappers
                 {
                     // ========== IDENTIFIANTS PRINCIPAUX ==========
                     ActCode = "COSMETIQUE", // Fixe pour tous les articles
-                    ArtCcli = dynamics.dataAreaId?.ToUpper() ?? "BR", // dataAreaId → ART_CCLI (code client/activité)
-                    ArtCode = "BR" + (dynamics.ItemId ?? ""), // "BR" + ItemId → ART_CODE (format: BRSHSEBO500)
-                    ArtCodc = dynamics.ItemId ?? "", // ItemId → ART_PAR.ART_CODC
-                    ArtDesl = dynamics.Name ?? "", // Name → ART_PAR.ART_DESL
+
+                    // ✅ TRAITEMENT UTF-8 : Code client/activité
+                    ArtCcli = _textProcessor.ProcessCode(dynamics.dataAreaId) ?? "BR",
+
+                    // ✅ TRAITEMENT UTF-8 : Code article (format: BRSHSEBO500)
+                    ArtCode = "BR" + _textProcessor.ProcessCode(dynamics.ItemId),
+
+                    // ✅ TRAITEMENT UTF-8 : Code article source
+                    ArtCodc = _textProcessor.ProcessCode(dynamics.ItemId),
+
+                    // ✅ TRAITEMENT UTF-8 : Désignation article (max 100 caractères)
+                    ArtDesl = _textProcessor.ProcessName(dynamics.Name, 100),
 
                     // ========== UNITÉ ET CODE-BARRES ==========
-                    ArtAlpha2 = !string.IsNullOrEmpty(dynamics.UnitId) ? dynamics.UnitId : "UNITE", // RG11: UNITE par défaut
-                    ArtEanu = dynamics.itemBarCode ?? "", // itemBarCode → ART_PAR.ART_EANU
+                    // ✅ TRAITEMENT UTF-8 : Unité avec valeur par défaut
+                    ArtAlpha2 = !string.IsNullOrEmpty(dynamics.UnitId)
+                        ? _textProcessor.ProcessCode(dynamics.UnitId)
+                        : "UNITE",
+
+                    // ✅ TRAITEMENT UTF-8 : Code-barres EAN
+                    ArtEanu = _textProcessor.ProcessCode(dynamics.itemBarCode),
 
                     // ========== CATÉGORIES ET GROUPES ==========
-                    ArtAlpha17 = TransformCategory(dynamics.Category), // Category transformée → ART.ALPHA17
-                    ArtAlpha3 = dynamics.OrigCountryRegionId ?? "", // OrigCountryRegionId → ART.ALPHA3
+                    // ✅ TRAITEMENT UTF-8 : Catégorie transformée
+                    ArtAlpha17 = TransformCategory(dynamics.Category),
+
+                    // ✅ TRAITEMENT UTF-8 : Pays d'origine
+                    ArtAlpha3 = _textProcessor.ProcessCode(dynamics.OrigCountryRegionId),
 
                     // ========== STATUT ET POIDS ==========
-                    ArtStat = ConvertProductLifecycleState(dynamics.ProductLifecycleStateId), // RG21: Si 'Non' alors "2" sinon "3"
-                    ArtPoiu = dynamics.GrossWeight, // GrossWeight → ART_PAR.ART_POIU
+                    ArtStat = ConvertProductLifecycleState(dynamics.ProductLifecycleStateId),
+                    ArtPoiu = dynamics.GrossWeight,
 
                     // ========== CONDITIONNEMENT ==========
-                    ArtQtec = dynamics.FactorColli, // FactorColli → ART_PAR.ART_QTEC
-                    ArtQtep = dynamics.FactorPallet == 0 ? 0 : dynamics.FactorPallet, // RG8: Si Gestion VL Palette = 0 alors vide
+                    ArtQtec = dynamics.FactorColli,
+                    ArtQtep = dynamics.FactorPallet == 0 ? 0 : dynamics.FactorPallet,
 
                     // ========== DURÉE DE VIE ==========
-                    ArtNum19 = dynamics.PdsShelfLife > 0 ? dynamics.PdsShelfLife : 1620, // RG10: 1620 par défaut si non géré
+                    ArtNum19 = dynamics.PdsShelfLife > 0 ? dynamics.PdsShelfLife : 1620,
 
                     // ========== IDENTIFIANTS EXTERNES ==========
-                    ArtAlpha8 = !string.IsNullOrEmpty(dynamics.ExternalItemId) ? dynamics.ExternalItemId : dynamics.ItemId ?? "", // RG12: Code article par défaut
+                    // ✅ TRAITEMENT UTF-8 : ID externe avec fallback
+                    ArtAlpha8 = !string.IsNullOrEmpty(dynamics.ExternalItemId)
+                        ? _textProcessor.ProcessCode(dynamics.ExternalItemId)
+                        : _textProcessor.ProcessCode(dynamics.ItemId),
 
                     // ========== TRAÇABILITÉ ==========
-                    ArtDluo = dynamics.TrackingDLCDDLUO, // TrackingDLCDDLUO → ART_PAR.ART_DLUO
-                    ArtLot1 = dynamics.TrackingLot1, // TrackingLot1 → ART_PAR.ART_LOT1
-                    ArtLot2 = dynamics.TrackingLot2, // TrackingLot2 → ART_PAR.ART_LOT2
-                    ArtNss = dynamics.TrackingProoftag > 0 ? 1 : 0, // RG18: Si gestion des prooftag valeur 1 sinon 0
+                    ArtDluo = dynamics.TrackingDLCDDLUO,
+                    ArtLot1 = dynamics.TrackingLot1,
+                    ArtLot2 = dynamics.TrackingLot2,
+                    ArtNss = dynamics.TrackingProoftag > 0 ? 1 : 0,
 
                     // ========== RÉTIQUETAGE ==========
-                    ArtTop1 = ConvertVersionAttributeToInt(dynamics.ProducVersionAttribute), // ProducVersionAttribute → ART_PAR.ART_TOP1
+                    ArtTop1 = ConvertVersionAttributeToInt(dynamics.ProducVersionAttribute),
 
                     // ========== DIMENSIONS BRUTES ==========
-                    ArtLonu = dynamics.grossDepth, // grossDepth → ART_PAR.ART_LONU
-                    ArtLaru = dynamics.grossWidth, // grossWidth → ART_PAR.ART_LARU
-                    ArtHauu = dynamics.grossHeight, // grossHeight → ART_PAR.ART_HAUU
+                    ArtLonu = dynamics.grossDepth,
+                    ArtLaru = dynamics.grossWidth,
+                    ArtHauu = dynamics.grossHeight,
 
                     // ========== MATIÈRE DANGEREUSE ==========
-                    ArtTop17 = dynamics.HMIMIndicator, // HMIMIndicator → ART_PAR.ART_TOP17
+                    ArtTop17 = dynamics.HMIMIndicator,
 
                     // ========== DIMENSIONS NETTES ==========
-                    ArtLonc = dynamics.Depth, // Depth → ART_PAR.ART_LONC
-                    ArtLarc = dynamics.Width, // Width → ART_PAR.ART_LARC
-                    ArtHauc = dynamics.Height, // Height → ART_PAR.ART_HAUC
-                    ArtPoic = dynamics.Weight, // Weight → ART_PAR.ART_POIC
+                    ArtLonc = dynamics.Depth,
+                    ArtLarc = dynamics.Width,
+                    ArtHauc = dynamics.Height,
+                    ArtPoic = dynamics.Weight,
 
                     // ========== CHAMPS AVEC VALEURS PAR DÉFAUT (RG) ==========
-                    ArtAlpha14 = "SEC", // RG2: SEC par défaut
-                    ArtRstk = "00002", // RG3: 00002 par défaut
-                    ArtUni = 1, // RG4: 1 par défaut
-                    ArtSpcb = "0", // RG5: 0 par défaut
-                    ArtColi = 1, // RG6: 1 par défaut
-                    ArtPal = 0, // RG7: 0 par défaut
-                    ArtNum18 = 1, // RG9: 1 par défaut
-                    ArtAlpha18 = "1510@0@@@@", // RG13: 1510@0@@@@ par défaut
-                    ArtAlpha24 = "500@300", // RG14: 500@300 par défaut (corrigé depuis votre "300@500")
-                    ArtAlpha26 = "BR", // RG15: BR par défaut
-                    ArtNse = "0", // RG17: 0 par défaut
+                    ArtAlpha14 = "SEC",
+                    ArtRstk = "00002",
+                    ArtUni = 1,
+                    ArtSpcb = "0",
+                    ArtColi = 1,
+                    ArtPal = 0,
+                    ArtNum18 = 1,
+                    ArtAlpha18 = "1510@0@@@@",
+                    ArtAlpha24 = "500@300",
+                    ArtAlpha26 = "BR",
+                    ArtNse = "0",
                     ArtEanc = ""
                 };
+
+                // Statistiques de traitement pour diagnostic
+                if (_logger.IsEnabled(LogLevel.Debug))
+                {
+                    LogProcessingStats(dynamics, winDev);
+                }
 
                 _logger.LogDebug($"Article mappé: {dynamics.ItemId} → Code: {winDev.ArtCode}, Catégorie: {dynamics.Category} → {winDev.ArtAlpha17}");
                 return winDev;
@@ -111,25 +140,28 @@ namespace DynamicsToXmlTranslator.Mappers
         }
 
         /// <summary>
-        /// Transforme la catégorie selon les règles métier demandées
+        /// Transforme la catégorie selon les règles métier avec traitement UTF-8
         /// </summary>
         private string TransformCategory(string? category)
         {
             if (string.IsNullOrEmpty(category))
                 return "Autres";
 
+            // ✅ TRAITEMENT UTF-8 : Nettoyer la catégorie avant traitement
+            string cleanCategory = _textProcessor.ProcessName(category);
+
             // Appliquer les règles de transformation
-            if (category.Contains("Produit Fini"))
+            if (cleanCategory.Contains("Produit Fini"))
                 return "PF";
-            else if (category.Contains("Accessoire"))
+            else if (cleanCategory.Contains("Accessoire"))
                 return "Machine et accessoire";
-            else if (category.Contains("Démonstration"))
+            else if (cleanCategory.Contains("Demonstration"))
                 return "Machine et accessoire";
-            else if (category.Contains("Reconditionné"))
+            else if (cleanCategory.Contains("Reconditionne"))
                 return "Machine et accessoire";
-            else if (category.Contains("Appareils"))
+            else if (cleanCategory.Contains("Appareils"))
                 return "Machine et accessoire";
-            else if (category.Contains("ECHANTILLON"))
+            else if (cleanCategory.Contains("ECHANTILLON"))
                 return "Echantillon";
             else
                 return "Autres";
@@ -137,36 +169,64 @@ namespace DynamicsToXmlTranslator.Mappers
 
         /// <summary>
         /// Convertit ProductLifecycleStateId en code selon RG21
-        /// Logique : "Non" = "2", tout le reste = "3"
+        /// AVEC traitement UTF-8
         /// </summary>
         private string ConvertProductLifecycleState(string? lifecycleState)
         {
             if (string.IsNullOrEmpty(lifecycleState))
-                return "3"; // Valeur par défaut pour champ vide
+                return "3";
 
-            // RG21: Si 'Non' alors 2 sinon 3
-            return lifecycleState.ToUpper().Trim() switch
+            // ✅ TRAITEMENT UTF-8 : Nettoyer avant comparaison
+            string cleanState = _textProcessor.ProcessText(lifecycleState).ToUpper().Trim();
+
+            return cleanState switch
             {
-                "NON" or "NO" => "2", // Cas spécifique NON/NO
-                _ => "3" // Tout le reste
+                "NON" or "NO" => "2",
+                _ => "3"
             };
         }
 
         /// <summary>
-        /// Convertit ProducVersionAttribute en entier pour ART_TOP1
+        /// Convertit ProducVersionAttribute en entier avec traitement UTF-8
         /// </summary>
         private int ConvertVersionAttributeToInt(string? versionAttribute)
         {
             if (string.IsNullOrEmpty(versionAttribute))
                 return 0;
 
-            // Logique de conversion selon vos besoins
-            return versionAttribute.ToUpper() switch
+            // ✅ TRAITEMENT UTF-8 : Nettoyer avant traitement
+            string cleanAttribute = _textProcessor.ProcessText(versionAttribute).ToUpper();
+
+            return cleanAttribute switch
             {
                 "YES" or "OUI" or "Y" or "O" => 1,
                 "NO" or "NON" or "N" => 0,
-                _ => int.TryParse(versionAttribute, out var result) ? result : 0
+                _ => int.TryParse(cleanAttribute, out var result) ? result : 0
             };
+        }
+
+        /// <summary>
+        /// Log des statistiques de traitement UTF-8 pour diagnostic
+        /// </summary>
+        private void LogProcessingStats(DynamicsArticle dynamics, WinDevArticle winDev)
+        {
+            var nameStats = _textProcessor.GetProcessingStats(dynamics.Name, winDev.ArtDesl);
+            var codeStats = _textProcessor.GetProcessingStats(dynamics.ItemId, winDev.ArtCodc);
+
+            if (nameStats.TransformationApplied || codeStats.TransformationApplied)
+            {
+                _logger.LogDebug($"Transformations UTF-8 appliquées pour l'article {dynamics.ItemId}:");
+
+                if (nameStats.TransformationApplied)
+                {
+                    _logger.LogDebug($"  Nom: '{dynamics.Name}' → '{winDev.ArtDesl}' ({nameStats.OriginalLength}→{nameStats.ProcessedLength} chars)");
+                }
+
+                if (codeStats.TransformationApplied)
+                {
+                    _logger.LogDebug($"  Code: '{dynamics.ItemId}' → '{winDev.ArtCodc}' ({codeStats.OriginalLength}→{codeStats.ProcessedLength} chars)");
+                }
+            }
         }
 
         /// <summary>
@@ -179,7 +239,6 @@ namespace DynamicsToXmlTranslator.Mappers
 
             var dynamics = article.DynamicsData;
 
-            // Vérifications minimales
             if (string.IsNullOrEmpty(dynamics.ItemId))
             {
                 _logger.LogWarning("Article sans ItemId");
@@ -196,7 +255,7 @@ namespace DynamicsToXmlTranslator.Mappers
         }
 
         /// <summary>
-        /// Méthode utilitaire pour obtenir un résumé de l'article mappé
+        /// Méthode utilitaire pour obtenir un résumé de l'article mappé avec info UTF-8
         /// </summary>
         public string GetMappingSummary(Article article)
         {
@@ -206,25 +265,23 @@ namespace DynamicsToXmlTranslator.Mappers
             var dynamics = article.DynamicsData;
             var transformedCategory = TransformCategory(dynamics.Category);
 
-            return $"=== MAPPING ARTICLE (selon Excel + RG) ===\n" +
+            return $"=== MAPPING ARTICLE (selon Excel + RG + UTF-8) ===\n" +
                    $"API → SPEED:\n" +
-                   $"  dataAreaId: '{dynamics.dataAreaId}' → ART_CCLI (code client)\n" +
-                   $"  ItemId: '{dynamics.ItemId}' → ART_PAR.ART_CODC\n" +
-                   $"  ART_CODE: 'BR{dynamics.ItemId}' (format BR + ItemId)\n" +
-                   $"  Name: '{dynamics.Name}' → ART_PAR.ART_DESL\n" +
-                   $"  UnitId: '{dynamics.UnitId}' → ART_PAR.ART_ALPHA2 (RG11: UNITE si vide)\n" +
-                   $"  itemBarCode: '{dynamics.itemBarCode}' → ART_PAR.ART_EANU\n" +
-                   $"  Category: '{dynamics.Category}' → '{transformedCategory}' → ART.ALPHA17\n" +
-                   $"  OrigCountryRegionId: '{dynamics.OrigCountryRegionId}' → ART.ALPHA3\n" +
+                   $"  dataAreaId: '{dynamics.dataAreaId}' → ART_CCLI (traité UTF-8)\n" +
+                   $"  ItemId: '{dynamics.ItemId}' → ART_PAR.ART_CODC (traité UTF-8)\n" +
+                   $"  ART_CODE: 'BR{_textProcessor.ProcessCode(dynamics.ItemId)}' (format BR + ItemId, traité UTF-8)\n" +
+                   $"  Name: '{dynamics.Name}' → '{_textProcessor.ProcessName(dynamics.Name, 100)}' → ART_PAR.ART_DESL (traité UTF-8, max 100 chars)\n" +
+                   $"  UnitId: '{dynamics.UnitId}' → ART_PAR.ART_ALPHA2 (RG11: UNITE si vide, traité UTF-8)\n" +
+                   $"  itemBarCode: '{dynamics.itemBarCode}' → ART_PAR.ART_EANU (traité UTF-8)\n" +
+                   $"  Category: '{dynamics.Category}' → '{transformedCategory}' → ART.ALPHA17 (traité UTF-8)\n" +
+                   $"  OrigCountryRegionId: '{dynamics.OrigCountryRegionId}' → ART.ALPHA3 (traité UTF-8)\n" +
                    $"  GrossWeight: {dynamics.GrossWeight}g → ART_PAR.ART_POIU\n" +
                    $"  FactorColli: {dynamics.FactorColli} → ART_PAR.ART_QTEC\n" +
                    $"  FactorPallet: {dynamics.FactorPallet} → ART_PAR.ART_QTEP (RG8)\n" +
                    $"  PdsShelfLife: {dynamics.PdsShelfLife} → ART_PAR.ART_NUM19 (RG10: 1620 si vide)\n" +
-                   $"  ProducVersionAttribute: '{dynamics.ProducVersionAttribute}' → ART_PAR.ART_TOP1\n" +
+                   $"  ProducVersionAttribute: '{dynamics.ProducVersionAttribute}' → ART_PAR.ART_TOP1 (traité UTF-8)\n" +
                    $"  ACT_CODE: 'COSMETIQUE' (fixe)\n" +
-                   $"  Suivi: L1={dynamics.TrackingLot1}, L2={dynamics.TrackingLot2}, DLUO={dynamics.TrackingDLCDDLUO}\n" +
-                   $"  Prooftag: {dynamics.TrackingProoftag} → ART_NSS (RG18: 1 si >0, sinon 0)\n" +
-                   $"  Transformation catégorie: '{dynamics.Category}' → '{transformedCategory}'";
+                   $"  ✅ TOUS LES CHAMPS TEXTE TRAITÉS AVEC NORMALISATION UTF-8";
         }
     }
 }
