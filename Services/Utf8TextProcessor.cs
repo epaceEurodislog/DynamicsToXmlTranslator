@@ -9,16 +9,12 @@ namespace DynamicsToXmlTranslator.Services
 {
     /// <summary>
     /// Service de traitement des caractères spéciaux et normalisation UTF-8 pour export XML
-    /// À placer dans le fichier : Services/Utf8TextProcessor.cs
+    /// VERSION BULLETPROOF - GARANTIE SANS DOUBLONS
     /// </summary>
     public class Utf8TextProcessor
     {
         private readonly ILogger<Utf8TextProcessor> _logger;
-
-        // Dictionnaire de mapping des caractères spéciaux vers leurs équivalents ASCII/XML
         private readonly Dictionary<string, string> _characterMapping;
-
-        // Regex pour détecter les caractères non-ASCII
         private readonly Regex _nonAsciiRegex;
 
         public Utf8TextProcessor(ILogger<Utf8TextProcessor> logger)
@@ -31,9 +27,6 @@ namespace DynamicsToXmlTranslator.Services
         /// <summary>
         /// Traite et normalise un texte pour l'export XML
         /// </summary>
-        /// <param name="input">Texte d'entrée pouvant contenir des caractères spéciaux</param>
-        /// <param name="maxLength">Longueur maximale du texte de sortie (optionnel)</param>
-        /// <returns>Texte normalisé compatible XML</returns>
         public string ProcessText(string? input, int? maxLength = null)
         {
             if (string.IsNullOrEmpty(input))
@@ -41,29 +34,18 @@ namespace DynamicsToXmlTranslator.Services
 
             try
             {
-                // Étape 1: Normalisation Unicode (décomposition puis recomposition)
                 string normalized = input.Normalize(NormalizationForm.FormKD);
-
-                // Étape 2: Remplacement des caractères spéciaux connus
                 string processed = ReplaceSpecialCharacters(normalized);
-
-                // Étape 3: Suppression des caractères de contrôle et invisibles
                 processed = RemoveControlCharacters(processed);
-
-                // Étape 4: Conversion des caractères accentués restants
                 processed = RemoveAccents(processed);
-
-                // Étape 5: Échappement des caractères XML spéciaux
                 processed = EscapeXmlCharacters(processed);
 
-                // Étape 6: Limitation de longueur si spécifiée
                 if (maxLength.HasValue && processed.Length > maxLength.Value)
                 {
                     processed = processed.Substring(0, maxLength.Value);
                     _logger.LogDebug($"Texte tronqué à {maxLength.Value} caractères: '{input}' → '{processed}'");
                 }
 
-                // Étape 7: Validation finale
                 ValidateXmlCompatibility(processed);
 
                 if (input != processed)
@@ -76,8 +58,6 @@ namespace DynamicsToXmlTranslator.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"Erreur lors du traitement du texte: '{input}'");
-
-                // En cas d'erreur, retourner une version basique nettoyée
                 return CleanBasicText(input, maxLength);
             }
         }
@@ -85,112 +65,124 @@ namespace DynamicsToXmlTranslator.Services
         /// <summary>
         /// Traite spécifiquement les codes articles et identifiants
         /// </summary>
-        /// <param name="code">Code à traiter</param>
-        /// <returns>Code normalisé</returns>
         public string ProcessCode(string? code)
         {
             if (string.IsNullOrEmpty(code))
                 return "";
 
-            // Pour les codes, on est plus strict : uniquement alphanumériques et quelques caractères spéciaux
             string processed = ProcessText(code);
-
-            // Remplacer les espaces par des underscores dans les codes
             processed = processed.Replace(" ", "_");
-
-            // Supprimer tous les caractères non autorisés dans les codes
             processed = Regex.Replace(processed, @"[^a-zA-Z0-9_\-.]", "");
-
-            return processed.ToUpper(); // Codes en majuscules par convention
+            return processed.ToUpper();
         }
 
         /// <summary>
         /// Traite les noms et descriptions avec préservation maximale
         /// </summary>
-        /// <param name="name">Nom ou description à traiter</param>
-        /// <param name="maxLength">Longueur maximale</param>
-        /// <returns>Nom normalisé</returns>
         public string ProcessName(string? name, int? maxLength = null)
         {
             if (string.IsNullOrEmpty(name))
                 return "";
 
-            // Pour les noms, on préserve plus de caractères
             string processed = ProcessText(name, maxLength);
-
-            // Nettoyer les espaces multiples
             processed = Regex.Replace(processed, @"\s+", " ");
-
-            // Supprimer les espaces en début/fin
             processed = processed.Trim();
-
             return processed;
         }
 
         /// <summary>
-        /// Initialise le dictionnaire de mapping des caractères spéciaux
+        /// ✅ MÉTHODE BULLETPROOF : Construction par étapes pour éviter TOUT doublon
         /// </summary>
         private Dictionary<string, string> InitializeCharacterMapping()
         {
-            return new Dictionary<string, string>
+            var mapping = new Dictionary<string, string>();
+
+            // ========== ÉTAPE 1: RÈGLE SPÉCIALE & ==========
+            TryAdd(mapping, "&", "et");
+            TryAdd(mapping, "&amp;", "et");
+            TryAdd(mapping, " & ", " et ");
+
+            // ========== ÉTAPE 2: VOYELLES MINUSCULES ==========
+            TryAdd(mapping, "à", "a"); TryAdd(mapping, "á", "a"); TryAdd(mapping, "â", "a"); TryAdd(mapping, "ã", "a"); TryAdd(mapping, "ä", "a"); TryAdd(mapping, "å", "a");
+            TryAdd(mapping, "è", "e"); TryAdd(mapping, "é", "e"); TryAdd(mapping, "ê", "e"); TryAdd(mapping, "ë", "e");
+            TryAdd(mapping, "ì", "i"); TryAdd(mapping, "í", "i"); TryAdd(mapping, "î", "i"); TryAdd(mapping, "ï", "i");
+            TryAdd(mapping, "ò", "o"); TryAdd(mapping, "ó", "o"); TryAdd(mapping, "ô", "o"); TryAdd(mapping, "õ", "o"); TryAdd(mapping, "ö", "o");
+            TryAdd(mapping, "ù", "u"); TryAdd(mapping, "ú", "u"); TryAdd(mapping, "û", "u"); TryAdd(mapping, "ü", "u");
+
+            // ========== ÉTAPE 3: CONSONNES SPÉCIALES MINUSCULES ==========
+            TryAdd(mapping, "ç", "c"); TryAdd(mapping, "ñ", "n"); TryAdd(mapping, "ÿ", "y"); TryAdd(mapping, "ý", "y");
+
+            // ========== ÉTAPE 4: VOYELLES MAJUSCULES ==========
+            TryAdd(mapping, "À", "A"); TryAdd(mapping, "Á", "A"); TryAdd(mapping, "Â", "A"); TryAdd(mapping, "Ã", "A"); TryAdd(mapping, "Ä", "A"); TryAdd(mapping, "Å", "A");
+            TryAdd(mapping, "È", "E"); TryAdd(mapping, "É", "E"); TryAdd(mapping, "Ê", "E"); TryAdd(mapping, "Ë", "E");
+            TryAdd(mapping, "Ì", "I"); TryAdd(mapping, "Í", "I"); TryAdd(mapping, "Î", "I"); TryAdd(mapping, "Ï", "I");
+            TryAdd(mapping, "Ò", "O"); TryAdd(mapping, "Ó", "O"); TryAdd(mapping, "Ô", "O"); TryAdd(mapping, "Õ", "O"); TryAdd(mapping, "Ö", "O");
+            TryAdd(mapping, "Ù", "U"); TryAdd(mapping, "Ú", "U"); TryAdd(mapping, "Û", "U"); TryAdd(mapping, "Ü", "U");
+
+            // ========== ÉTAPE 5: CONSONNES SPÉCIALES MAJUSCULES ==========
+            TryAdd(mapping, "Ç", "C"); TryAdd(mapping, "Ñ", "N"); TryAdd(mapping, "Ÿ", "Y"); TryAdd(mapping, "Ý", "Y");
+
+            // ========== ÉTAPE 6: LIGATURES ==========
+            TryAdd(mapping, "œ", "oe"); TryAdd(mapping, "Œ", "OE"); TryAdd(mapping, "æ", "ae"); TryAdd(mapping, "Æ", "AE"); TryAdd(mapping, "ß", "ss");
+
+            // ========== ÉTAPE 7: DEVISES ==========
+            TryAdd(mapping, "€", "EUR"); TryAdd(mapping, "$", "USD"); TryAdd(mapping, "£", "GBP");
+
+            // ========== ÉTAPE 8: SYMBOLES ==========
+            TryAdd(mapping, "°", "deg"); TryAdd(mapping, "©", "(C)"); TryAdd(mapping, "®", "(R)"); TryAdd(mapping, "™", "(TM)");
+
+            // ========== ÉTAPE 9: GUILLEMETS (codes Unicode explicites) ==========
+            TryAdd(mapping, "\u201C", "\""); // "
+            TryAdd(mapping, "\u201D", "\""); // "
+            TryAdd(mapping, "\u2018", "'");  // '
+            TryAdd(mapping, "\u2019", "'");  // '
+            TryAdd(mapping, "\u00AB", "\""); // «
+            TryAdd(mapping, "\u00BB", "\""); // »
+
+            // ========== ÉTAPE 10: TIRETS ==========
+            TryAdd(mapping, "\u2013", "-"); // –
+            TryAdd(mapping, "\u2014", "-"); // —
+
+            // ========== ÉTAPE 11: ESPACES SPÉCIAUX (codes Unicode explicites uniquement) ==========
+            TryAdd(mapping, "\u00A0", " ");  // Espace insécable
+            TryAdd(mapping, "\u2009", " ");  // Espace fine
+            TryAdd(mapping, "\u2008", " ");  // Espace de ponctuation
+            TryAdd(mapping, "\u2006", " ");  // Espace d'un sixième de cadratin
+            TryAdd(mapping, "\u2007", " ");  // Espace de chiffre
+
+            // ========== ÉTAPE 12: CARACTÈRES MATHÉMATIQUES ==========
+            TryAdd(mapping, "×", "x"); TryAdd(mapping, "÷", "/"); TryAdd(mapping, "±", "+/-");
+
+            // ========== ÉTAPE 13: PONCTUATION SPÉCIALE ==========
+            TryAdd(mapping, "…", "..."); TryAdd(mapping, "‚", ","); TryAdd(mapping, "„", "\"");
+
+            // ========== ÉTAPE 14: CARACTÈRES DE CONTRÔLE (codes Unicode explicites) ==========
+            for (int i = 0; i <= 31; i++)
             {
-                // ✅ RÈGLE SPÉCIALE : & devient "et" (pas d'échappement XML)
-                {"&", "et"},
-                
-                // ✅ RÈGLES COMPLÉMENTAIRES FRANÇAISES
-                {"&amp;", "et"}, // Au cas où & serait déjà échappé
-                {" & ", " et "}, // & entouré d'espaces
-                {" et ", " et "}, // Normalisation (éviter double transformation)
-                
-                // Caractères français courants (é → e, etc.)
-                {"à", "a"}, {"á", "a"}, {"â", "a"}, {"ã", "a"}, {"ä", "a"}, {"å", "a"},
-                {"è", "e"}, {"é", "e"}, {"ê", "e"}, {"ë", "e"},
-                {"ì", "i"}, {"í", "i"}, {"î", "i"}, {"ï", "i"},
-                {"ò", "o"}, {"ó", "o"}, {"ô", "o"}, {"õ", "o"}, {"ö", "o"},
-                {"ù", "u"}, {"ú", "u"}, {"û", "u"}, {"ü", "u"},
-                {"ç", "c"}, {"ñ", "n"},
-                {"ÿ", "y"}, {"ý", "y"},
-                
-                // Majuscules
-                {"À", "A"}, {"Á", "A"}, {"Â", "A"}, {"Ã", "A"}, {"Ä", "A"}, {"Å", "A"},
-                {"È", "E"}, {"É", "E"}, {"Ê", "E"}, {"Ë", "E"},
-                {"Ì", "I"}, {"Í", "I"}, {"Î", "I"}, {"Ï", "I"},
-                {"Ò", "O"}, {"Ó", "O"}, {"Ô", "O"}, {"Õ", "O"}, {"Ö", "O"},
-                {"Ù", "U"}, {"Ú", "U"}, {"Û", "U"}, {"Ü", "U"},
-                {"Ç", "C"}, {"Ñ", "N"},
-                {"Ÿ", "Y"}, {"Ý", "Y"},
-                
-                // Caractères spéciaux courants
-                {"œ", "oe"}, {"Œ", "OE"},
-                {"æ", "ae"}, {"Æ", "AE"},
-                {"ß", "ss"},
-                
-                // Devises et symboles
-                {"€", "EUR"}, {"$", "USD"}, {"£", "GBP"},
-                {"°", "deg"}, {"©", "(C)"}, {"®", "(R)"}, {"™", "(TM)"},
-                
-                // Guillemets et apostrophes
-                {""", "\""}, {""", "\""}, {"'", "'"}, {"'", "'"},
-                {"«", "\""}, {"»", "\""},
-                
-                // Tirets et espaces spéciaux
-                {"–", "-"}, {"—", "-"}, {" ", " "}, {" ", " "},
-                
-                // Caractères mathématiques courants
-                {"×", "x"}, {"÷", "/"}, {"±", "+/-"},
-                
-                // Caractères de ponctuation spéciaux
-                {"…", "..."}, {"‚", ","}, {"„", "\""},
-                
-                // Caractères problématiques pour XML
-                {"\u0000", ""}, {"\u0001", ""}, {"\u0002", ""}, {"\u0003", ""}, {"\u0004", ""},
-                {"\u0005", ""}, {"\u0006", ""}, {"\u0007", ""}, {"\u0008", ""},
-                {"\u000B", ""}, {"\u000C", ""}, {"\u000E", ""}, {"\u000F", ""},
-                {"\u0010", ""}, {"\u0011", ""}, {"\u0012", ""}, {"\u0013", ""}, {"\u0014", ""},
-                {"\u0015", ""}, {"\u0016", ""}, {"\u0017", ""}, {"\u0018", ""}, {"\u0019", ""},
-                {"\u001A", ""}, {"\u001B", ""}, {"\u001C", ""}, {"\u001D", ""}, {"\u001E", ""},
-                {"\u001F", ""}, {"\u007F", ""}
-            };
+                if (i != 9 && i != 10 && i != 13) // Garder \t, \n, \r
+                {
+                    TryAdd(mapping, ((char)i).ToString(), "");
+                }
+            }
+            TryAdd(mapping, "\u007F", ""); // DEL
+
+            _logger.LogInformation($"✅ Dictionnaire UTF-8 initialisé avec {mapping.Count} mappings sans doublons");
+            return mapping;
+        }
+
+        /// <summary>
+        /// ✅ MÉTHODE BULLETPROOF : Ajoute une clé seulement si elle n'existe pas déjà
+        /// </summary>
+        private void TryAdd(Dictionary<string, string> dict, string key, string value)
+        {
+            if (!dict.ContainsKey(key))
+            {
+                dict.Add(key, value);
+            }
+            else
+            {
+                _logger.LogWarning($"Clé dupliquée ignorée: '{key}' = '{value}'");
+            }
         }
 
         /// <summary>
@@ -211,16 +203,13 @@ namespace DynamicsToXmlTranslator.Services
         private string RemoveControlCharacters(string input)
         {
             var result = new StringBuilder();
-
             foreach (char c in input)
             {
-                // Garder les caractères imprimables et les espaces/tabulations/retours ligne
                 if (!char.IsControl(c) || c == '\t' || c == '\n' || c == '\r')
                 {
                     result.Append(c);
                 }
             }
-
             return result.ToString();
         }
 
@@ -249,7 +238,6 @@ namespace DynamicsToXmlTranslator.Services
         /// </summary>
         private string EscapeXmlCharacters(string input)
         {
-            // ✅ IMPORTANT : Ne PAS échapper & car il a déjà été remplacé par "et" dans ReplaceSpecialCharacters
             return input
                 .Replace("<", "&lt;")
                 .Replace(">", "&gt;")
@@ -262,7 +250,6 @@ namespace DynamicsToXmlTranslator.Services
         /// </summary>
         private void ValidateXmlCompatibility(string text)
         {
-            // Vérifier qu'il n'y a pas de caractères interdits en XML 1.0
             foreach (char c in text)
             {
                 if (IsInvalidXmlChar(c))
@@ -277,8 +264,6 @@ namespace DynamicsToXmlTranslator.Services
         /// </summary>
         private bool IsInvalidXmlChar(char c)
         {
-            // XML 1.0 : caractères autorisés
-            // #x9 | #xA | #xD | [#x20-#xD7FF] | [#xE000-#xFFFD] | [#x10000-#x10FFFF]
             return !(c == 0x09 || c == 0x0A || c == 0x0D ||
                     (c >= 0x20 && c <= 0xD7FF) ||
                     (c >= 0xE000 && c <= 0xFFFD));
@@ -292,9 +277,7 @@ namespace DynamicsToXmlTranslator.Services
             if (string.IsNullOrEmpty(input))
                 return "";
 
-            // Nettoyage très basique : garder uniquement ASCII imprimable
             var result = new StringBuilder();
-
             foreach (char c in input)
             {
                 if (c >= 32 && c <= 126) // ASCII imprimable
@@ -308,12 +291,10 @@ namespace DynamicsToXmlTranslator.Services
             }
 
             string cleaned = result.ToString().Trim();
-
             if (maxLength.HasValue && cleaned.Length > maxLength.Value)
             {
                 cleaned = cleaned.Substring(0, maxLength.Value);
             }
-
             return cleaned;
         }
 
@@ -332,25 +313,19 @@ namespace DynamicsToXmlTranslator.Services
         }
 
         /// <summary>
-        /// ✅ NOUVEAU : Méthode de test pour illustrer les transformations
-        /// Exemples de transformations appliquées selon vos règles
+        /// Méthode de test pour illustrer les transformations
         /// </summary>
         public void LogTransformationExamples(ILogger logger)
         {
             var examples = new Dictionary<string, string>
             {
-                // ✅ RÈGLE SPÉCIALE : & devient "et"
                 {"L'Oréal & Co", "L'Oreal et Co"},
                 {"Beauté & Santé", "Beaute et Sante"},
                 {"Shampoing & Soin", "Shampoing et Soin"},
-                
-                // ✅ RÈGLE STANDARD : accents supprimés (é → e)
                 {"Crème hydratante", "Creme hydratante"},
                 {"Sérum régénérant", "Serum regenerant"},
                 {"Après-shampoing", "Apres-shampoing"},
                 {"Démaquillant", "Demaquillant"},
-                
-                // ✅ EXEMPLES MIXTES
                 {"L'Occitane en Provence & Cie", "L'Occitane en Provence et Cie"},
                 {"Garnier Fructis - Fortifiant & Réparateur", "Garnier Fructis - Fortifiant et Reparateur"},
                 {"Nivea Crème & Huile Corporelle", "Nivea Creme et Huile Corporelle"}
