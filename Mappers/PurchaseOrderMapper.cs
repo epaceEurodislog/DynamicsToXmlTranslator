@@ -74,8 +74,8 @@ namespace DynamicsToXmlTranslator.Mappers
                     ReaRfaf = _textProcessor.ProcessCode(dynamics.ReservationRef),
 
                     // ========== CHAMPS AVEC RÈGLES DE GESTION ==========
-                    ReaAlpha5 = ApplyQualityControlRule(dynamics.ItemId),
-                    ReaAlpha1 = ApplyReceptionTypeRule(dynamics.SupportNumber),
+                    ReaAlpha5 = "",
+                    ReaAlpha1 = "",
                     ReaAlpha11 = "NIVEAU3",
                     ReaAlpha12 = "NORMAL"
                 };
