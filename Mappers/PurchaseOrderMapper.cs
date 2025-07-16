@@ -38,87 +38,46 @@ namespace DynamicsToXmlTranslator.Mappers
 
                 var winDev = new WinDevPurchaseOrder
                 {
+                    // ========== VALEURS FIXES ==========
+                    ActCode = "COSMETIQUE",
+                    ReaCcli = "BR",
+
                     // ========== IDENTIFIANTS PRINCIPAUX ==========
-                    // ✅ TRAITEMENT UTF-8 : Numéro attendu réception
                     ReaRfce = _textProcessor.ProcessCode(dynamics.PurchOrderDocNum),
-
-                    // ✅ TRAITEMENT UTF-8 : N° Commande Achat
                     ReaRfti = _textProcessor.ProcessCode(dynamics.PurchId),
-
-                    // Date de réception prévue (format date, pas de traitement UTF-8 nécessaire)
+                    ReaRfcl = dynamics.LineNumber, // Même valeur que REA_NoLR
+                    ReaTyat = "001", // 001 pour Purchase Orders
                     ReaDalp = FormatDateForXml(dynamics.ReceiptDate),
 
                     // ========== FOURNISSEUR ==========
-                    // ✅ TRAITEMENT UTF-8 : Code tiers fournisseur
-                    ReaCtaf = _textProcessor.ProcessCode(dynamics.OrderAccount),
-
-                    // ✅ TRAITEMENT UTF-8 : Nom tiers fournisseur (max 100 caractères)
-                    PurchName = _textProcessor.ProcessName(dynamics.PurchName, 100),
+                    ReaCtaf = "BR" + _textProcessor.ProcessCode(dynamics.OrderAccount),
 
                     // ========== DÉTAILS LIGNE ==========
-                    // Numéro ligne (numérique, pas de traitement UTF-8)
                     ReaNoLr = dynamics.LineNumber,
-
-                    // ✅ TRAITEMENT UTF-8 : Référence article
-                    ArtCode = _textProcessor.ProcessCode(dynamics.ItemId),
-
-                    // Quantité prévue (numérique, pas de traitement UTF-8)
+                    ArtCode = "BR" + _textProcessor.ProcessCode(dynamics.ItemId),
                     ReaQtre = dynamics.QtyOrdered,
+                    ReaQtrc = dynamics.QtyOrdered, // Même valeur que REA_QTRE
 
-                    // ========== TRAÇABILITÉ (avec RG7 et RG8) ==========
-                    // ✅ TRAITEMENT UTF-8 : Lot 1
+                    // ========== TRAÇABILITÉ ==========
                     ReaLot1 = ApplyLotRule(dynamics.Lot, dynamics.ItemId, 1),
-
-                    // ✅ TRAITEMENT UTF-8 : Lot 2
                     ReaLot2 = ApplyLotRule(dynamics.Lot2, dynamics.ItemId, 2),
-
-                    // Date DLUO (format date)
                     ReaDluo = FormatDateForXml(dynamics.DLUO),
 
-                    // ========== NUMÉRO SUPPORT ET COMMENTAIRES ==========
-                    // ✅ TRAITEMENT UTF-8 : Numéro support (SSCC entrant)
+                    // ========== SUPPORT ET COMMENTAIRES ==========
                     ReaNoSu = _textProcessor.ProcessCode(dynamics.SupportNumber),
-
-                    // ✅ TRAITEMENT UTF-8 : Commentaires (max 255 caractères)
                     ReaCom = _textProcessor.ProcessName(dynamics.Notes, 255),
 
-                    // ========== CODE QUALITÉ (RG4) ==========
-                    // ✅ TRAITEMENT UTF-8 : Code qualité
+                    // ========== CODE QUALITÉ ==========
                     QuaCode = ApplyQualityCodeRule(dynamics.QualityCode),
 
                     // ========== RÉFÉRENCE RÉSERVATION ==========
-                    // ✅ TRAITEMENT UTF-8 : Référence réservation
                     ReaRfaf = _textProcessor.ProcessCode(dynamics.ReservationRef),
 
-                    // ========== VALEURS FIXES ==========
-                    ActCode = "COSMETIQUE", // VALEUR FIXE
-                    Ccli = "BR", // VALEUR FIXE
-
                     // ========== CHAMPS AVEC RÈGLES DE GESTION ==========
-                    // ✅ TRAITEMENT UTF-8 : Contrôle qualité (RG5)
                     ReaAlpha5 = ApplyQualityControlRule(dynamics.ItemId),
-
-                    // ✅ TRAITEMENT UTF-8 : Type de réception (RG6)
                     ReaAlpha1 = ApplyReceptionTypeRule(dynamics.SupportNumber),
-
-                    ReaAlpha11 = "NIVEAU3", // VALEUR FIXE
-                    ReaAlpha12 = "NORMAL", // VALEUR FIXE
-
-                    // ========== CHAMPS SUPPLÉMENTAIRES ==========
-                    // ✅ TRAITEMENT UTF-8 : Version table achat
-                    PurchTableVersion = _textProcessor.ProcessText(dynamics.PurchTableVersion),
-
-                    // ✅ TRAITEMENT UTF-8 : Statut 3PL
-                    Int3PlStatus = _textProcessor.ProcessText(dynamics.INT3PLStatus),
-
-                    // Dates supplémentaires
-                    DeliveryDate = FormatDateForXml(dynamics.DeliveryDate),
-
-                    // ✅ TRAITEMENT UTF-8 : Entrepôt destinataire
-                    InventLocationId = _textProcessor.ProcessCode(dynamics.InventLocationId),
-
-                    // ✅ TRAITEMENT UTF-8 : Statut document
-                    DocumentState = _textProcessor.ProcessText(dynamics.DocumentState)
+                    ReaAlpha11 = "NIVEAU3",
+                    ReaAlpha12 = "NORMAL"
                 };
 
                 // Log des transformations UTF-8 si en mode debug
@@ -203,14 +162,14 @@ namespace DynamicsToXmlTranslator.Mappers
         }
 
         /// <summary>
-        /// Formate une date pour le XML (format compatible WINDEV)
+        /// Formate une date pour le XML (format YYYYMMDD sans tirets)
         /// </summary>
         private string FormatDateForXml(DateTime? date)
         {
             if (date == null || date == DateTime.MinValue)
                 return "";
 
-            return date.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+            return date.Value.ToString("yyyyMMdd", CultureInfo.InvariantCulture);
         }
 
         /// <summary>
@@ -218,21 +177,21 @@ namespace DynamicsToXmlTranslator.Mappers
         /// </summary>
         private void LogProcessingStats(DynamicsPurchaseOrder dynamics, WinDevPurchaseOrder winDev)
         {
-            var nameStats = _textProcessor.GetProcessingStats(dynamics.PurchName, winDev.PurchName);
-            var codeStats = _textProcessor.GetProcessingStats(dynamics.PurchId, winDev.ReaRfti);
+            var purchIdStats = _textProcessor.GetProcessingStats(dynamics.PurchId, winDev.ReaRfti);
+            var notesStats = _textProcessor.GetProcessingStats(dynamics.Notes, winDev.ReaCom);
 
-            if (nameStats.TransformationApplied || codeStats.TransformationApplied)
+            if (purchIdStats.TransformationApplied || notesStats.TransformationApplied)
             {
                 _logger.LogDebug($"Transformations UTF-8 appliquées pour le Purchase Order {dynamics.PurchId}:");
 
-                if (nameStats.TransformationApplied)
+                if (purchIdStats.TransformationApplied)
                 {
-                    _logger.LogDebug($"  Nom fournisseur: '{dynamics.PurchName}' → '{winDev.PurchName}' ({nameStats.OriginalLength}→{nameStats.ProcessedLength} chars)");
+                    _logger.LogDebug($"  Purchase ID: '{dynamics.PurchId}' → '{winDev.ReaRfti}' ({purchIdStats.OriginalLength}→{purchIdStats.ProcessedLength} chars)");
                 }
 
-                if (codeStats.TransformationApplied)
+                if (notesStats.TransformationApplied)
                 {
-                    _logger.LogDebug($"  Code PO: '{dynamics.PurchId}' → '{winDev.ReaRfti}' ({codeStats.OriginalLength}→{codeStats.ProcessedLength} chars)");
+                    _logger.LogDebug($"  Notes: '{dynamics.Notes}' → '{winDev.ReaCom}' ({notesStats.OriginalLength}→{notesStats.ProcessedLength} chars)");
                 }
             }
         }
@@ -284,7 +243,6 @@ namespace DynamicsToXmlTranslator.Mappers
                    $"  PurchId: '{dynamics.PurchId}' → REA_DAT.REA_RFTI (traité UTF-8)\n" +
                    $"  ReceiptDate: '{dynamics.ReceiptDate}' → REA_DAT.REA_DALP\n" +
                    $"  OrderAccount: '{dynamics.OrderAccount}' → REA_DAT.REA_CTAF (traité UTF-8)\n" +
-                   $"  PurchName: '{dynamics.PurchName}' → '{_textProcessor.ProcessName(dynamics.PurchName, 100)}' (traité UTF-8, max 100 chars)\n" +
                    $"  LineNumber: {dynamics.LineNumber} → REA_DAT.REA_NoLR\n" +
                    $"  ItemId: '{dynamics.ItemId}' → REA_DAT.ART_CODE (traité UTF-8)\n" +
                    $"  QtyOrdered: {dynamics.QtyOrdered} → REA_DAT.REA_QTRE\n" +

@@ -38,81 +38,46 @@ namespace DynamicsToXmlTranslator.Mappers
 
                 var winDev = new WinDevTransferOrder
                 {
+                    // ========== VALEURS FIXES ==========
+                    ActCode = "COSMETIQUE",
+                    ReaCcli = "BR",
+
                     // ========== IDENTIFIANTS PRINCIPAUX ==========
-                    // ✅ TRAITEMENT UTF-8 : Expected Receipt Number
                     ReaRfce = _textProcessor.ProcessCode(dynamics.ExpectedReceiptNumber),
-
-                    // ✅ TRAITEMENT UTF-8 : N° Commande Transfer
                     ReaRfti = _textProcessor.ProcessCode(dynamics.TransferId),
-
-                    // Date de réception prévue
+                    ReaRfcl = dynamics.LineNum, // Même valeur que REA_NoLR
+                    ReaTyat = "001", // 001 pour Transfer Orders
                     ReaDalp = FormatDateForXml(dynamics.ReceiveDate),
 
                     // ========== FOURNISSEUR/CLIENT ==========
-                    // ✅ TRAITEMENT UTF-8 : Code tiers fournisseur (RG2)
                     ReaCtaf = ApplySupplierAccountRule(dynamics.TransferId),
 
-                    // ✅ TRAITEMENT UTF-8 : Nom tiers (RG2)
-                    XxxName = ApplySupplierNameRule(dynamics.TransferId),
-
                     // ========== DÉTAILS LIGNE ==========
-                    // Numéro ligne (numérique)
                     ReaNoLr = dynamics.LineNum,
-
-                    // ✅ TRAITEMENT UTF-8 : Référence article
-                    ArtCode = _textProcessor.ProcessCode(dynamics.ItemId),
-
-                    // Quantité prévue (numérique, RG3)
+                    ArtCode = "BR" + _textProcessor.ProcessCode(dynamics.ItemId),
                     ReaQtre = dynamics.QtyShipped,
+                    ReaQtrc = dynamics.QtyShipped, // Même valeur que REA_QTRE
 
-                    // ========== TRAÇABILITÉ (avec RG7 et RG8) ==========
-                    // ✅ TRAITEMENT UTF-8 : Lot 1
+                    // ========== TRAÇABILITÉ ==========
                     ReaLot1 = ApplyLotRule(dynamics.inventBatchId, dynamics.ItemId, 1),
-
-                    // ✅ TRAITEMENT UTF-8 : Lot 2
                     ReaLot2 = ApplyLotRule(dynamics.inventSerialId, dynamics.ItemId, 2),
-
-                    // Date DLUO
                     ReaDluo = FormatDateForXml(dynamics.expDate),
 
                     // ========== SUPPORT ET COMMENTAIRES ==========
-                    // ✅ TRAITEMENT UTF-8 : Numéro support (SSCC entrant)
                     ReaNoSu = _textProcessor.ProcessCode(dynamics.LicensePlateId),
-
-                    // ✅ TRAITEMENT UTF-8 : Commentaires (max 255 caractères)
                     ReaCom = _textProcessor.ProcessName(dynamics.Notes, 255),
 
-                    // ========== CODE QUALITÉ (RG4) ==========
-                    // ✅ TRAITEMENT UTF-8 : Code qualité
+                    // ========== CODE QUALITÉ ==========
                     QuaCode = ApplyQualityCodeRule(dynamics.PdsDispositionCode),
 
                     // ========== RÉFÉRENCE RÉSERVATION ==========
-                    // Référence réservation - pas dans vos données
-                    ReaRfaf = "",
-
-                    // ========== VALEURS FIXES ==========
-                    ActCode = "COSMETIQUE", // VALEUR FIXE
-                    Ccli = "BR", // VALEUR FIXE
+                    ReaRfaf = "", // Pas dans vos données
 
                     // ========== CHAMPS AVEC RÈGLES DE GESTION ==========
-                    // ✅ TRAITEMENT UTF-8 : Contrôle qualité (RG5)
                     ReaAlpha5 = ApplyQualityControlRule(dynamics.ItemId),
-
-                    // ✅ TRAITEMENT UTF-8 : Type de réception (RG6)
                     ReaAlpha1 = ApplyReceptionTypeRule(dynamics.LicensePlateId),
-
-                    ReaAlpha11 = "NIVEAU3", // VALEUR FIXE
-                    ReaAlpha12 = "NORMAL", // VALEUR FIXE
-
-                    // ========== CHAMPS SUPPLÉMENTAIRES ==========
-                    // ✅ TRAITEMENT UTF-8 : Statut 3PL
-                    Int3PlStatus = _textProcessor.ProcessText(dynamics.INT3PLStatus),
-
-                    // ✅ TRAITEMENT UTF-8 : Transaction ID
-                    InventTransId = _textProcessor.ProcessCode(dynamics.InventTransId),
-
-                    // ✅ TRAITEMENT UTF-8 : Entrepôt destinataire
-                    InventLocationIdTo = _textProcessor.ProcessCode(dynamics.InventLocationIdTo)
+                    ReaAlpha11 = "NIVEAU3",
+                    ReaAlpha12 = "NORMAL"
                 };
 
                 // Log des transformations UTF-8 si en mode debug
@@ -225,14 +190,14 @@ namespace DynamicsToXmlTranslator.Mappers
         }
 
         /// <summary>
-        /// Formate une date pour le XML (format compatible WINDEV)
+        /// Formate une date pour le XML (format YYYYMMDD sans tirets)
         /// </summary>
         private string FormatDateForXml(DateTime? date)
         {
             if (date == null || date == DateTime.MinValue)
                 return "";
 
-            return date.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+            return date.Value.ToString("yyyyMMdd", CultureInfo.InvariantCulture);
         }
 
         /// <summary>

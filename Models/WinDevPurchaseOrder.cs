@@ -5,10 +5,10 @@ namespace DynamicsToXmlTranslator.Models
     /// <summary>
     /// Représente la structure XML WINDEV pour les Purchase Orders
     /// </summary>
-    [XmlRoot("WINDEV_PURCHASE_TABLE")]
+    [XmlRoot("CF_ATTENDUS_COSMETIQUE")]
     public class WinDevPurchaseTable
     {
-        [XmlElement("Table")]
+        [XmlElement("LIGNE")]
         public List<WinDevPurchaseOrder> PurchaseOrders { get; set; }
 
         public WinDevPurchaseTable()
@@ -23,92 +23,73 @@ namespace DynamicsToXmlTranslator.Models
     public class WinDevPurchaseOrder
     {
         // ========== IDENTIFIANTS PRINCIPAUX ==========
+        [XmlElement("ACT_CODE")]
+        public string ActCode { get; set; } = "COSMETIQUE"; // VALEUR FIXE
+
+        [XmlElement("REA_CCLI")]
+        public string ReaCcli { get; set; } = "BR"; // VALEUR FIXE
+
         [XmlElement("REA_RFCE")]
-        public string ReaRfce { get; set; } = ""; // PurchOrderDocNum → REA_DAT.REA_RFCE
+        public string ReaRfce { get; set; } = ""; // PurchOrderDocNum
 
         [XmlElement("REA_RFTI")]
-        public string ReaRfti { get; set; } = ""; // PurchId → REA_DAT.REA_RFTI
+        public string ReaRfti { get; set; } = ""; // PurchId
+
+        [XmlElement("REA_RFCL")]
+        public int ReaRfcl { get; set; } // Même valeur que REA_NoLR
+
+        [XmlElement("REA_TYAT")]
+        public string ReaTyat { get; set; } = "001"; // 001 pour Purchase Orders
 
         [XmlElement("REA_DALP")]
-        public string ReaDalp { get; set; } = ""; // ReceiptDate → REA_DAT.REA_DALP (format DATE)
+        public string ReaDalp { get; set; } = ""; // ReceiptDate
 
-        // ========== FOURNISSEUR ==========
         [XmlElement("REA_CTAF")]
-        public string ReaCtaf { get; set; } = ""; // OrderAccount → REA_DAT.REA_CTAF
+        public string ReaCtaf { get; set; } = ""; // OrderAccount
 
-        // ========== DÉTAILS LIGNE ==========
         [XmlElement("REA_NoLR")]
-        public int ReaNoLr { get; set; } = 0; // LineNumber → REA_DAT.REA_NoLR
+        public int ReaNoLr { get; set; } = 0; // LineNumber
 
         [XmlElement("ART_CODE")]
-        public string ArtCode { get; set; } = ""; // ItemId → REA_DAT.ART_CODE
+        public string ArtCode { get; set; } = ""; // "BR" + ItemId
 
         [XmlElement("REA_QTRE")]
-        public decimal ReaQtre { get; set; } = 0; // QtyOrdered → REA_DAT.REA_QTRE
+        public decimal ReaQtre { get; set; } = 0; // QtyOrdered
 
-        // ========== TRAÇABILITÉ ==========
+        [XmlElement("REA_QTRC")]
+        public decimal ReaQtrc { get; set; } = 0; // Même valeur que REA_QTRE
+
         [XmlElement("REA_LOT1")]
-        public string ReaLot1 { get; set; } = ""; // Lot → REA_DAT.REA_LOT1 (RG7)
+        public string ReaLot1 { get; set; } = ""; // Lot
 
         [XmlElement("REA_LOT2")]
-        public string ReaLot2 { get; set; } = ""; // Lot2 → REA_DAT.REA_LOT2 (RG8)
+        public string ReaLot2 { get; set; } = ""; // Lot2
 
         [XmlElement("REA_DLUO")]
-        public string ReaDluo { get; set; } = ""; // DLUO → REA_DAT.REA_DLUO (format DATE)
+        public string ReaDluo { get; set; } = ""; // DLUO
 
-        // ========== NUMÉRO SUPPORT ET COMMENTAIRES ==========
         [XmlElement("REA_NoSU")]
-        public string ReaNoSu { get; set; } = ""; // SupportNumber → REA_DAT.REA_NoSU
+        public string ReaNoSu { get; set; } = ""; // SupportNumber
 
         [XmlElement("REA_COM")]
-        public string ReaCom { get; set; } = ""; // Notes → REA_DAT.REA_COM
+        public string ReaCom { get; set; } = ""; // Notes
 
-        // ========== CODE QUALITÉ ==========
         [XmlElement("QUA_CODE")]
-        public string QuaCode { get; set; } = ""; // QualityCode → REA_DAT.QUA_CODE (RG4)
+        public string QuaCode { get; set; } = ""; // QualityCode
 
-        // ========== RÉFÉRENCE RÉSERVATION ==========
         [XmlElement("REA_RFAF")]
-        public string ReaRfaf { get; set; } = ""; // ReservationRef → REA_DAT.REA_RFAF
+        public string ReaRfaf { get; set; } = ""; // ReservationRef
 
-        // ========== VALEURS FIXES ==========
-        [XmlElement("ACT_CODE")]
-        public string ActCode { get; set; } = "COSMETIQUE"; // VALEUR FIXE = COSMETIQUE
-
-        [XmlElement("CCLI")]
-        public string Ccli { get; set; } = "BR"; // VALEUR FIXE = BR
-
-        // ========== CHAMPS AVEC RÈGLES DE GESTION ==========
         [XmlElement("REA_ALPHA5")]
-        public string ReaAlpha5 { get; set; } = ""; // Contrôle Qualité (RG5)
+        public string ReaAlpha5 { get; set; } = ""; // Contrôle Qualité
 
         [XmlElement("REA_ALPHA1")]
-        public string ReaAlpha1 { get; set; } = ""; // Type de réception (RG6)
+        public string ReaAlpha1 { get; set; } = ""; // Type de réception
 
         [XmlElement("REA_ALPHA11")]
-        public string ReaAlpha11 { get; set; } = "NIVEAU3"; // VALEUR FIXE = NIVEAU3
+        public string ReaAlpha11 { get; set; } = "NIVEAU3"; // VALEUR FIXE
 
         [XmlElement("REA_ALPHA12")]
-        public string ReaAlpha12 { get; set; } = "NORMAL"; // VALEUR FIXE = NORMAL
-
-        // ========== CHAMPS SUPPLÉMENTAIRES ==========
-        [XmlElement("PurchTableVersion")]
-        public string PurchTableVersion { get; set; } = ""; // PurchTableVersion
-
-        [XmlElement("INT3PLStatus")]
-        public string Int3PlStatus { get; set; } = ""; // INT3PLStatus
-
-        // ========== DATES SUPPLÉMENTAIRES ==========
-        [XmlElement("DeliveryDate")]
-        public string DeliveryDate { get; set; } = ""; // DeliveryDate (format DATE)
-
-        [XmlElement("InventLocationId")]
-        public string InventLocationId { get; set; } = ""; // InventLocationId
-
-        [XmlElement("DocumentState")]
-        public string DocumentState { get; set; } = ""; // DocumentState
-
-        [XmlElement("PurchName")]
-        public string PurchName { get; set; } = ""; // PurchName (nom fournisseur)
+        public string ReaAlpha12 { get; set; } = "NORMAL"; // VALEUR FIXE
     }
 }

@@ -172,31 +172,15 @@ namespace DynamicsToXmlTranslator.Mappers
         }
 
         /// <summary>
-        /// Transforme la catégorie selon les règles métier avec traitement UTF-8
+        /// Retourne la catégorie brute avec traitement UTF-8 minimal pour compatibilité XML
         /// </summary>
         private string TransformCategory(string? category)
         {
             if (string.IsNullOrEmpty(category))
-                return "Autres";
+                return "";
 
-            // ✅ TRAITEMENT UTF-8 : Nettoyer la catégorie avant traitement
-            string cleanCategory = _textProcessor.ProcessName(category);
-
-            // Appliquer les règles de transformation
-            if (cleanCategory.Contains("Produit Fini"))
-                return "PF";
-            else if (cleanCategory.Contains("Accessoire"))
-                return "Machine et accessoire";
-            else if (cleanCategory.Contains("Demonstration"))
-                return "Machine et accessoire";
-            else if (cleanCategory.Contains("Reconditionne"))
-                return "Machine et accessoire";
-            else if (cleanCategory.Contains("Appareils"))
-                return "Machine et accessoire";
-            else if (cleanCategory.Contains("ECHANTILLON"))
-                return "Echantillon";
-            else
-                return "Autres";
+            // ✅ TRAITEMENT UTF-8 : Seulement pour la compatibilité XML
+            return _textProcessor.ProcessText(category);
         }
 
         /// <summary>

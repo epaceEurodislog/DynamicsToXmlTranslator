@@ -41,7 +41,7 @@ namespace DynamicsToXmlTranslator.Services
         /// <summary>
         /// Exporte une liste de Return Orders WINDEV en fichier XML
         /// </summary>
-        public async Task<string?> ExportToXmlAsync(List<WinDevReturnOrder> returnOrders, List<int>? originalReturnOrderIds = null, string fileNamePrefix = "RETURN_ORDERS_COSMETIQUE")
+        public async Task<string?> ExportToXmlAsync(List<WinDevReturnOrder> returnOrders, List<int>? originalReturnOrderIds = null, string fileNamePrefix = "RECAT_COSMETIQUE_RETURN_ORDERS")
         {
             if (returnOrders == null || !returnOrders.Any())
             {
@@ -144,7 +144,7 @@ namespace DynamicsToXmlTranslator.Services
 
                     _logger.LogInformation($"Export du lot {batchNumber}/{batches.Count} ({batch.Count} Return Orders)");
 
-                    string fileNamePrefix = $"RETURN_ORDERS_COSMETIQUE_LOT{batchNumber:D3}_{baseTimestamp}";
+                    string fileNamePrefix = $"RECAT_COSMETIQUE_RETURN_ORDERS_LOT{batchNumber:D3}_{baseTimestamp}";
                     string fileName = $"{fileNamePrefix}.XML";
                     string filePath = Path.Combine(_exportDirectory, fileName);
 
@@ -237,7 +237,7 @@ namespace DynamicsToXmlTranslator.Services
         public async Task<string?> GenerateTestXmlAsync()
         {
             var testReturnOrders = new List<WinDevReturnOrder>();
-            return await ExportToXmlAsync(testReturnOrders, null, "RETURN_ORDERS_TEST_VIDE");
+            return await ExportToXmlAsync(testReturnOrders, null, "RECAT_COSMETIQUE_RETURN_ORDERS_TEST_VIDE");
         }
     }
 }

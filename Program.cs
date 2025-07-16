@@ -455,7 +455,7 @@ namespace DynamicsToXmlTranslator
                 Console.WriteLine($"✓ {winDevPurchaseOrders.Count} Purchase Orders convertis");
                 Console.WriteLine($"✅ {utf8Transformations} Purchase Orders avec transformations UTF-8");
 
-                await ExportPurchaseOrdersInBatches(winDevPurchaseOrders, null, "PURCHASE_ORDERS_TEST_UTF8");
+                await ExportPurchaseOrdersInBatches(winDevPurchaseOrders, null, "PURCHASE_ORDERS_TEST");
 
                 stopwatch.Stop();
                 Console.WriteLine($"⏱️ Temps Purchase Orders : {stopwatch.ElapsedMilliseconds}ms");
@@ -513,7 +513,7 @@ namespace DynamicsToXmlTranslator
                 Console.WriteLine($"✓ {winDevPurchaseOrders.Count} Purchase Orders convertis");
                 Console.WriteLine($"✅ {utf8Transformations} Purchase Orders avec transformations UTF-8");
 
-                await ExportPurchaseOrdersInBatches(winDevPurchaseOrders, originalIds, "PURCHASE_ORDERS_UTF8");
+                await ExportPurchaseOrdersInBatches(winDevPurchaseOrders, originalIds, "RECAT_COSMETIQUE_PURCHASE_ORDERS");
 
                 stopwatch.Stop();
                 Console.WriteLine($"⏱️ Temps Purchase Orders : {stopwatch.ElapsedMilliseconds}ms");
@@ -571,7 +571,7 @@ namespace DynamicsToXmlTranslator
                 Console.WriteLine($"✓ {winDevReturnOrders.Count} Return Orders convertis");
                 Console.WriteLine($"✅ {utf8Transformations} Return Orders avec transformations UTF-8");
 
-                await ExportReturnOrdersInBatches(winDevReturnOrders, null, "RETURN_ORDERS_TEST_UTF8");
+                await ExportReturnOrdersInBatches(winDevReturnOrders, null, "RETURN_ORDERS_TEST");
 
                 stopwatch.Stop();
                 Console.WriteLine($"⏱️ Temps Return Orders : {stopwatch.ElapsedMilliseconds}ms");
@@ -629,7 +629,7 @@ namespace DynamicsToXmlTranslator
                 Console.WriteLine($"✓ {winDevReturnOrders.Count} Return Orders convertis");
                 Console.WriteLine($"✅ {utf8Transformations} Return Orders avec transformations UTF-8");
 
-                await ExportReturnOrdersInBatches(winDevReturnOrders, originalIds, "RETURN_ORDERS_UTF8");
+                await ExportReturnOrdersInBatches(winDevReturnOrders, originalIds, "RECAT_COSMETIQUE_RETURN_ORDERS");
 
                 stopwatch.Stop();
                 Console.WriteLine($"⏱️ Temps Return Orders : {stopwatch.ElapsedMilliseconds}ms");
@@ -687,7 +687,7 @@ namespace DynamicsToXmlTranslator
                 Console.WriteLine($"✓ {winDevTransferOrders.Count} Transfer Orders convertis");
                 Console.WriteLine($"✅ {utf8Transformations} Transfer Orders avec transformations UTF-8");
 
-                await ExportTransferOrdersInBatches(winDevTransferOrders, null, "TRANSFER_ORDERS_TEST_UTF8");
+                await ExportTransferOrdersInBatches(winDevTransferOrders, null, "TRANSFER_ORDERS_TEST");
 
                 stopwatch.Stop();
                 Console.WriteLine($"⏱️ Temps Transfer Orders : {stopwatch.ElapsedMilliseconds}ms");
@@ -745,7 +745,7 @@ namespace DynamicsToXmlTranslator
                 Console.WriteLine($"✓ {winDevTransferOrders.Count} Transfer Orders convertis");
                 Console.WriteLine($"✅ {utf8Transformations} Transfer Orders avec transformations UTF-8");
 
-                await ExportTransferOrdersInBatches(winDevTransferOrders, originalIds, "TRANSFER_ORDERS_UTF8");
+                await ExportTransferOrdersInBatches(winDevTransferOrders, originalIds, "RECAT_COSMETIQUE_TRANSFER_ORDERS");
 
                 stopwatch.Stop();
                 Console.WriteLine($"⏱️ Temps Transfer Orders : {stopwatch.ElapsedMilliseconds}ms");
