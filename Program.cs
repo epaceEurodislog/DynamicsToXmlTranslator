@@ -41,6 +41,11 @@ namespace DynamicsToXmlTranslator
         private static TransferOrderXmlExportService _transferOrderXmlExportService;
         private static TransferOrderMapper _transferOrderMapper;
 
+        // Services Packing Slips
+        private static PackingSlipDatabaseService _packingSlipDatabaseService;
+        private static PackingSlipTxtExportService _packingSlipTxtExportService;
+        private static PackingSlipMapper _packingSlipMapper;
+
         static async Task Main(string[] args)
         {
             Console.WriteLine("=== Traducteur Dynamics vers XML WINDEV (avec UTF-8 + exclusion ART_STAT=3) ===");
@@ -62,6 +67,8 @@ namespace DynamicsToXmlTranslator
                 await _databaseService.CreateTablesIfNotExistsAsync();
                 await _returnOrderDatabaseService.CreateReturnOrderTablesIfNotExistsAsync();
                 await _transferOrderDatabaseService.CreateTransferOrderTablesIfNotExistsAsync();
+                await _packingSlipDatabaseService.CreatePackingSlipTablesIfNotExistsAsync();
+
 
                 // ✅ NOUVEAU : Afficher les statistiques avant traitement
                 await DisplayArticleStatistics();
@@ -99,6 +106,12 @@ namespace DynamicsToXmlTranslator
                     {
                         await ExportAllTransferOrdersTestMode();
                     }
+
+                    // ✅ AJOUTER CES LIGNES
+                    if (exportType == "packingslips" || exportType == "ps" || exportType == "all")
+                    {
+                        await ExportAllPackingSlipsTestMode();
+                    }
                 }
                 else
                 {
@@ -123,6 +136,12 @@ namespace DynamicsToXmlTranslator
                     if (exportType == "transferorders" || exportType == "to" || exportType == "all")
                     {
                         await ExportNewTransferOrdersOnly();
+                    }
+
+                    // ✅ AJOUTER CES LIGNES
+                    if (exportType == "packingslips" || exportType == "ps" || exportType == "all")
+                    {
+                        await ExportNewPackingSlipsOnly();
                     }
                 }
 
@@ -204,13 +223,15 @@ namespace DynamicsToXmlTranslator
             {
                 var exportType = args[1].ToLower();
                 if (exportType == "articles" || exportType == "purchaseorders" || exportType == "po" ||
-                    exportType == "returnorders" || exportType == "ro" || exportType == "transferorders" || exportType == "to")
+                    exportType == "returnorders" || exportType == "ro" || exportType == "transferorders" || exportType == "to" ||
+                    exportType == "packingslips" || exportType == "ps") // ✅ AJOUT
                 {
                     return exportType switch
                     {
                         "po" => "purchaseorders",
                         "ro" => "returnorders",
                         "to" => "transferorders",
+                        "ps" => "packingslips", // ✅ AJOUT
                         _ => exportType
                     };
                 }
@@ -221,13 +242,15 @@ namespace DynamicsToXmlTranslator
             {
                 var exportType = args[0].ToLower();
                 if (exportType == "articles" || exportType == "purchaseorders" || exportType == "po" ||
-                    exportType == "returnorders" || exportType == "ro" || exportType == "transferorders" || exportType == "to")
+                    exportType == "returnorders" || exportType == "ro" || exportType == "transferorders" || exportType == "to" ||
+                    exportType == "packingslips" || exportType == "ps") // ✅ AJOUT
                 {
                     return exportType switch
                     {
                         "po" => "purchaseorders",
                         "ro" => "returnorders",
                         "to" => "transferorders",
+                        "ps" => "packingslips", // ✅ AJOUT
                         _ => exportType
                     };
                 }
@@ -235,6 +258,241 @@ namespace DynamicsToXmlTranslator
 
             // Par défaut, exporter tout
             return "all";
+        }
+
+        // ========== MÉTHODES POUR PACKING SLIPS ==========
+
+        /// <summary>
+        /// Mode test : Export de tous les Packing Slips AVEC UTF-8 (2 fichiers)
+        /// </summary>
+        private static async Task ExportAllPackingSlipsTestMode()
+        {
+            Console.WriteLine("\n🧪 MODE TEST - Export de tous les Packing Slips (avec UTF-8, 2 fichiers)");
+            var stopwatch = Stopwatch.StartNew();
+
+            try
+            {
+                var packingSlips = await _packingSlipDatabaseService.GetAllPackingSlipsAsync();
+                Console.WriteLine($"✓ {packingSlips.Count} Packing Slips trouvés");
+
+                if (packingSlips.Count == 0)
+                {
+                    Console.WriteLine("ℹ️ Aucun Packing Slip trouvé");
+                    return;
+                }
+
+                // ✅ NOUVEAU : Grouper par commande (transRefId) pour créer les structures complètes
+                var commandGroups = packingSlips
+                    .Where(ps => ps.DynamicsData != null)
+                    .GroupBy(ps => ps.DynamicsData.transRefId)
+                    .ToList();
+
+                Console.WriteLine($"✓ {commandGroups.Count} commandes distinctes trouvées");
+
+                var speedPackingSlips = new List<SpeedPackingSlipComplete>();
+                var allOriginalIds = new List<int>();
+                int erreurs = 0;
+                int utf8Transformations = 0;
+
+                foreach (var commandGroup in commandGroups)
+                {
+                    var packingSlipsList = commandGroup.ToList();
+                    var speedPackingSlip = _packingSlipMapper.MapToSpeedComplete(packingSlipsList);
+
+                    if (speedPackingSlip != null)
+                    {
+                        speedPackingSlips.Add(speedPackingSlip);
+                        allOriginalIds.AddRange(speedPackingSlip.OriginalPackingSlipIds);
+
+                        // Vérifier les transformations UTF-8
+                        if (packingSlipsList.Any(ps => HasUtf8TransformationsPS(ps.DynamicsData)))
+                        {
+                            utf8Transformations++;
+                        }
+                    }
+                    else
+                    {
+                        erreurs++;
+                    }
+                }
+
+                Console.WriteLine($"✓ {speedPackingSlips.Count} commandes converties");
+                Console.WriteLine($"✓ {speedPackingSlips.Sum(ps => ps.Lines.Count)} lignes d'articles");
+                Console.WriteLine($"✅ {utf8Transformations} commandes avec transformations UTF-8");
+
+                if (erreurs > 0)
+                {
+                    Console.WriteLine($"⚠️ {erreurs} commandes n'ont pas pu être converties");
+                }
+
+                // ✅ NOUVEAU : Export avec la nouvelle méthode (2 fichiers)
+                await ExportPackingSlipsInBatches(speedPackingSlips, null, "LTRF_TEST");
+
+                stopwatch.Stop();
+                Console.WriteLine($"⏱️ Temps Packing Slips : {stopwatch.ElapsedMilliseconds}ms");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Erreur Packing Slips mode test : {ex.Message}");
+                _logger.LogError(ex, "Erreur Packing Slips mode test");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Mode production : Export des nouveaux Packing Slips AVEC UTF-8 (2 fichiers)
+        /// </summary>
+        private static async Task ExportNewPackingSlipsOnly()
+        {
+            Console.WriteLine("\n🆕 Export des nouveaux Packing Slips (avec UTF-8, 2 fichiers)");
+            var stopwatch = Stopwatch.StartNew();
+
+            try
+            {
+                var packingSlips = await _packingSlipDatabaseService.GetNonExportedPackingSlipsAsync();
+                Console.WriteLine($"✓ {packingSlips.Count} nouveaux Packing Slips trouvés");
+
+                if (packingSlips.Count == 0)
+                {
+                    Console.WriteLine("ℹ️ Aucun nouveau Packing Slip à exporter");
+                    return;
+                }
+
+                // ✅ NOUVEAU : Grouper par commande (transRefId) pour créer les structures complètes
+                var commandGroups = packingSlips
+                    .Where(ps => ps.DynamicsData != null)
+                    .GroupBy(ps => ps.DynamicsData.transRefId)
+                    .ToList();
+
+                Console.WriteLine($"✓ {commandGroups.Count} commandes distinctes trouvées");
+
+                var speedPackingSlips = new List<SpeedPackingSlipComplete>();
+                var allOriginalIds = new List<int>();
+                int erreurs = 0;
+                int utf8Transformations = 0;
+
+                foreach (var commandGroup in commandGroups)
+                {
+                    var packingSlipsList = commandGroup.ToList();
+                    var speedPackingSlip = _packingSlipMapper.MapToSpeedComplete(packingSlipsList);
+
+                    if (speedPackingSlip != null)
+                    {
+                        speedPackingSlips.Add(speedPackingSlip);
+                        allOriginalIds.AddRange(speedPackingSlip.OriginalPackingSlipIds);
+
+                        // Vérifier les transformations UTF-8
+                        if (packingSlipsList.Any(ps => HasUtf8TransformationsPS(ps.DynamicsData)))
+                        {
+                            utf8Transformations++;
+                        }
+                    }
+                    else
+                    {
+                        erreurs++;
+                    }
+                }
+
+                Console.WriteLine($"✓ {speedPackingSlips.Count} commandes converties");
+                Console.WriteLine($"✓ {speedPackingSlips.Sum(ps => ps.Lines.Count)} lignes d'articles");
+                Console.WriteLine($"✅ {utf8Transformations} commandes avec transformations UTF-8");
+
+                if (erreurs > 0)
+                {
+                    Console.WriteLine($"⚠️ {erreurs} commandes n'ont pas pu être converties");
+                }
+
+                // ✅ NOUVEAU : Export avec marquage automatique (2 fichiers)
+                await ExportPackingSlipsInBatches(speedPackingSlips, allOriginalIds, "LTRF");
+
+                stopwatch.Stop();
+                Console.WriteLine($"⏱️ Temps Packing Slips : {stopwatch.ElapsedMilliseconds}ms");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Erreur nouveaux Packing Slips : {ex.Message}");
+                _logger.LogError(ex, "Erreur nouveaux Packing Slips");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Vérifie si un Packing Slip a des transformations UTF-8
+        /// </summary>
+        private static bool HasUtf8TransformationsPS(DynamicsPackingSlip? dynamics)
+        {
+            if (dynamics == null) return false;
+
+            var originalDeliveryName = dynamics.DeliveryName ?? "";
+            var originalStreet = dynamics.Street ?? "";
+            var originalCommentPreparation = dynamics.CommentPreparation ?? "";
+
+            var processedDeliveryName = _textProcessor.ProcessName(originalDeliveryName);
+            var processedStreet = _textProcessor.ProcessName(originalStreet);
+            var processedCommentPreparation = _textProcessor.ProcessName(originalCommentPreparation);
+
+            return originalDeliveryName != processedDeliveryName ||
+                   originalStreet != processedStreet ||
+                   originalCommentPreparation != processedCommentPreparation;
+        }
+
+        /// <summary>
+        /// Méthode utilitaire pour exporter les Packing Slips en gérant les lots (2 fichiers)
+        /// </summary>
+        private static async Task ExportPackingSlipsInBatches(List<SpeedPackingSlipComplete> speedPackingSlips, List<int>? originalIds, string filePrefix)
+        {
+            Console.WriteLine("Export des Packing Slips en 2 fichiers TXT (OPE + OPL)...");
+            var batchSize = _configuration.GetValue<int>("XmlExport:BatchSize", 1000);
+
+            if (speedPackingSlips.Count > batchSize)
+            {
+                Console.WriteLine($"📦 Export en {Math.Ceiling((double)speedPackingSlips.Count / batchSize)} lots...");
+
+                var results = await _packingSlipTxtExportService.ExportInBatchesAsync(speedPackingSlips, originalIds, batchSize);
+
+                Console.WriteLine($"✓ Export terminé : {results.Count} lots créés");
+
+                int totalHeaders = 0;
+                int totalLines = 0;
+
+                foreach (var result in results)
+                {
+                    Console.WriteLine($"  📁 En-têtes: {Path.GetFileName(result.HeaderFilePath)} ({result.HeaderCount} commandes)");
+                    Console.WriteLine($"  📁 Lignes: {Path.GetFileName(result.LinesFilePath)} ({result.LinesCount} lignes)");
+
+                    totalHeaders += result.HeaderCount;
+                    totalLines += result.LinesCount;
+                }
+
+                Console.WriteLine($"📊 Total: {totalHeaders} en-têtes, {totalLines} lignes");
+
+                await _packingSlipDatabaseService.LogPackingSlipExportAsync(
+                    $"Export Packing Slips ({results.Count} lots)",
+                    totalHeaders,
+                    "SUCCESS",
+                    $"{results.Count} lots générés avec UTF-8: {totalHeaders} en-têtes, {totalLines} lignes"
+                );
+            }
+            else
+            {
+                var result = await _packingSlipTxtExportService.ExportToTxtAsync(speedPackingSlips, originalIds, filePrefix);
+
+                if (result != null)
+                {
+                    Console.WriteLine($"✓ Export terminé :");
+                    Console.WriteLine($"  📁 En-têtes: {Path.GetFileName(result.HeaderFilePath)} ({result.HeaderCount} commandes)");
+                    Console.WriteLine($"  📁 Lignes: {Path.GetFileName(result.LinesFilePath)} ({result.LinesCount} lignes)");
+
+                    Console.WriteLine($"📊 Résumé: {result.HeaderCount} en-têtes, {result.LinesCount} lignes");
+
+                    await _packingSlipDatabaseService.LogPackingSlipExportAsync(
+                        $"{Path.GetFileName(result.HeaderFilePath)}+{Path.GetFileName(result.LinesFilePath)}",
+                        result.HeaderCount,
+                        "SUCCESS",
+                        $"Export 2 fichiers TXT avec UTF-8: {result.HeaderCount} en-têtes, {result.LinesCount} lignes"
+                    );
+                }
+            }
         }
 
         /// <summary>
@@ -1099,6 +1357,11 @@ namespace DynamicsToXmlTranslator
             _transferOrderDatabaseService = new TransferOrderDatabaseService(_configuration, loggerFactory.CreateLogger<TransferOrderDatabaseService>());
             _transferOrderXmlExportService = new TransferOrderXmlExportService(_configuration, loggerFactory.CreateLogger<TransferOrderXmlExportService>(), _transferOrderDatabaseService);
             _transferOrderMapper = new TransferOrderMapper(_configuration, loggerFactory.CreateLogger<TransferOrderMapper>(), _textProcessor);
+
+            // ✅ AJOUTER CES 3 LIGNES : Services Packing Slips (NOUVEAUX avec UTF-8)
+            _packingSlipDatabaseService = new PackingSlipDatabaseService(_configuration, loggerFactory.CreateLogger<PackingSlipDatabaseService>());
+            _packingSlipTxtExportService = new PackingSlipTxtExportService(_configuration, loggerFactory.CreateLogger<PackingSlipTxtExportService>(), _packingSlipDatabaseService);
+            _packingSlipMapper = new PackingSlipMapper(_configuration, loggerFactory.CreateLogger<PackingSlipMapper>(), _textProcessor);
         }
     }
 }
