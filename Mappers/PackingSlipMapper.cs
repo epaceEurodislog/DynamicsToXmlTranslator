@@ -267,34 +267,6 @@ namespace DynamicsToXmlTranslator.Mappers
         }
 
         /// <summary>
-        /// ✅ CORRIGÉ : Traitement du service transporteur selon mapping client (ALPHA40@ALPHA41)
-        /// </summary>
-        private void ProcessCarrierServiceCorrected(string? carrierServiceCode, SpeedPackingSlipHeader header)
-        {
-            if (string.IsNullOrEmpty(carrierServiceCode))
-            {
-                header.OPE_ALPHA40 = "BR";
-                header.OPE_ALPHA41 = "";
-                return;
-            }
-
-            string cleanService = _textProcessor.ProcessCode(carrierServiceCode);
-
-            // Séparer par @
-            var parts = cleanService.Split('@');
-
-            if (parts.Length >= 1)
-            {
-                header.OPE_ALPHA40 = parts[0].Trim();
-            }
-
-            if (parts.Length >= 2)
-            {
-                header.OPE_ALPHA41 = parts[1].Trim();
-            }
-        }
-
-        /// <summary>
         /// RG3: Gestion du code transport
         /// </summary>
         private string ApplyTransportCodeRule(string? carrierCode)
@@ -397,31 +369,69 @@ namespace DynamicsToXmlTranslator.Mappers
         }
 
         /// <summary>
-        /// Traitement du service transporteur pour l'en-tête
+        /// ✅ CORRIGÉ : Traitement du service transporteur SANS processeur UTF-8 pour préserver + et @
+        /// Format: "J+2@18" → alpha40="J+2", alpha41="18"
+        /// Format: "MAD" → alpha40="MAD", alpha41=""
+        /// Format vide → alpha40="", alpha41=""
         /// </summary>
-        private void ProcessCarrierService(string? carrierServiceCode, SpeedPackingSlipHeader header)
+        private void ProcessCarrierServiceCorrected(string? carrierServiceCode, SpeedPackingSlipHeader header)
         {
             if (string.IsNullOrEmpty(carrierServiceCode))
             {
-                header.OPE_ALPHA16 = "BR";
-                header.OPE_ALPHA18 = "";
+                header.OPE_ALPHA40 = "";  // ✅ CORRIGÉ : Vide au lieu de "BR"
+                header.OPE_ALPHA41 = "";
                 return;
             }
 
-            string cleanService = _textProcessor.ProcessCode(carrierServiceCode);
+            // ✅ NOUVEAU : Traitement SANS UTF-8 pour préserver + et @
+            string cleanService = CleanCarrierServiceOnly(carrierServiceCode);
 
-            // Séparer par @
+            // Cas spécial MAD : pas de séparation
+            if (cleanService.Equals("MAD", StringComparison.OrdinalIgnoreCase))
+            {
+                header.OPE_ALPHA40 = "MAD";
+                header.OPE_ALPHA41 = "";
+                return;
+            }
+
+            // Séparer par @ pour les autres cas
             var parts = cleanService.Split('@');
 
-            if (parts.Length >= 1)
+            if (parts.Length >= 1 && !string.IsNullOrWhiteSpace(parts[0]))
             {
-                header.OPE_ALPHA16 = parts[0].Trim();
+                header.OPE_ALPHA40 = parts[0].Trim(); // Garde le + intact
+            }
+            else
+            {
+                header.OPE_ALPHA40 = ""; // ✅ CORRIGÉ : Vide au lieu de "BR"
             }
 
-            if (parts.Length >= 2)
+            if (parts.Length >= 2 && !string.IsNullOrWhiteSpace(parts[1]))
             {
-                header.OPE_ALPHA18 = parts[1].Trim();
+                header.OPE_ALPHA41 = parts[1].Trim();
             }
+            else
+            {
+                header.OPE_ALPHA41 = "";
+            }
+        }
+
+        /// <summary>
+        /// ✅ NOUVEAU : Nettoyage minimal pour CarrierServiceCode SANS processeur UTF-8
+        /// Préserve les caractères + et @ qui sont importants pour ce champ
+        /// </summary>
+        private string CleanCarrierServiceOnly(string carrierServiceCode)
+        {
+            if (string.IsNullOrEmpty(carrierServiceCode))
+                return "";
+
+            // Nettoyage minimal : seulement les caractères de contrôle et espaces superflus
+            return carrierServiceCode
+                .Replace("\r", "")      // Supprimer retours chariot
+                .Replace("\n", "")      // Supprimer sauts de ligne  
+                .Replace("\t", " ")     // Remplacer tabulations par espaces
+                .Trim();                // Supprimer espaces début/fin
+                                        // IMPORTANT : On garde + et @ intacts !
         }
 
         /// <summary>
