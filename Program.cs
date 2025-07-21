@@ -10,6 +10,7 @@ using DynamicsToXmlTranslator.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Serilog;
+using static DynamicsToXmlTranslator.Models.SpeedPackingSlipHeader;
 
 namespace DynamicsToXmlTranslator
 {
@@ -326,7 +327,7 @@ namespace DynamicsToXmlTranslator
                 }
 
                 // ✅ NOUVEAU : Export avec la nouvelle méthode (2 fichiers)
-                await ExportPackingSlipsInBatches(speedPackingSlips, null, "LTRF_TEST");
+                await ExportPackingSlipsInBatches(speedPackingSlips, null, "COSMETIQUE_TEST");
 
                 stopwatch.Stop();
                 Console.WriteLine($"⏱️ Temps Packing Slips : {stopwatch.ElapsedMilliseconds}ms");
@@ -403,7 +404,7 @@ namespace DynamicsToXmlTranslator
                 }
 
                 // ✅ NOUVEAU : Export avec marquage automatique (2 fichiers)
-                await ExportPackingSlipsInBatches(speedPackingSlips, allOriginalIds, "LTRF");
+                await ExportPackingSlipsInBatches(speedPackingSlips, allOriginalIds, "COSMETIQUE");
 
                 stopwatch.Stop();
                 Console.WriteLine($"⏱️ Temps Packing Slips : {stopwatch.ElapsedMilliseconds}ms");
@@ -475,7 +476,7 @@ namespace DynamicsToXmlTranslator
             }
             else
             {
-                var result = await _packingSlipTxtExportService.ExportToTxtAsync(speedPackingSlips, originalIds, filePrefix);
+                var result = await _packingSlipTxtExportService.ExportToTxtAsync(speedPackingSlips, originalIds, "COSMETIQUE");
 
                 if (result != null)
                 {

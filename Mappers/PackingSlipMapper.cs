@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System.Linq;
 using System.Collections.Generic;
+using static DynamicsToXmlTranslator.Models.SpeedPackingSlipHeader;
 
 namespace DynamicsToXmlTranslator.Mappers
 {
@@ -100,41 +101,59 @@ namespace DynamicsToXmlTranslator.Mappers
 
                 // ========== DATES ==========
                 OPE_DACO = FormatDateForTxt(DateTime.Now),                    // Date du jour
-                OPE_DALI = FormatDateForTxt(dynamics.DlvDate),               // Date livraison souhaitée
+                OPE_DALI = FormatDateForTxt(dynamics.DlvDate),               // Date livraison souhaitée ✅ CORRECT
 
                 // ========== RÉFÉRENCES ==========
-                OPE_REDO = _textProcessor.ProcessCode(dynamics.transRefId),   // CLÉ DE LIAISON
-                TIE_CODE = _textProcessor.ProcessCode(dynamics.customer),    // Code Tiers destinataire
-                OPE_RTIE = ApplyReferenceRule(dynamics),                     // RG1 et RG2
-                OPE_ALPHA17 = _textProcessor.ProcessCode(dynamics.pickingRouteID), // Numéro Document D365
+                OPE_REDO = _textProcessor.ProcessCode(dynamics.transRefId),   // CLÉ DE LIAISON ✅ CORRECT
+                TIE_CODE = _textProcessor.ProcessCode(dynamics.customer),    // Code Tiers destinataire ✅ CORRECT
+                OPE_RTIE = ApplyReferenceRule(dynamics),                     // RG1 et RG2 ✅ CORRECT
+                OPE_ALPHA17 = _textProcessor.ProcessCode(dynamics.pickingRouteID), // Numéro Document D365 ✅ CORRECT
 
                 // ========== INFORMATIONS CLIENT ==========
-                TIE_NOM = _textProcessor.ProcessName(dynamics.DeliveryName, 50),    // Nom Tiers
-                OPE_ADVL = _textProcessor.ProcessName(dynamics.City, 50),           // Ville
-                OPE_ADCP = _textProcessor.ProcessCode(dynamics.ZipCode),            // Code postal
-                OPE_CPAY = _textProcessor.ProcessCode(dynamics.ISOcode),            // Pays ISO
-                OPE_TEL = _textProcessor.ProcessCode(dynamics.Phone),               // Téléphone
-                OPE_IMEL = _textProcessor.ProcessName(dynamics.Email, 100),         // Email
+                TIE_NOM = _textProcessor.ProcessName(dynamics.DeliveryName, 50),    // Nom Tiers ✅ CORRECT
+                OPE_ADVL = _textProcessor.ProcessName(dynamics.City, 50),           // Ville ✅ CORRECT
+                OPE_ADCP = _textProcessor.ProcessCode(dynamics.ZipCode),            // Code postal ✅ CORRECT
+                OPE_CPAY = _textProcessor.ProcessCode(dynamics.ISOcode),            // Pays ISO ✅ CORRECT
+                OPE_TEL = _textProcessor.ProcessCode(dynamics.Phone),               // Téléphone ✅ CORRECT
+                OPE_IMEL = _textProcessor.ProcessName(dynamics.Email, 100),         // Email ✅ CORRECT
+
+                // ✅ NOUVEAU : Champ Contact manquant
+                OPE_CONT = _textProcessor.ProcessName(dynamics.Contact, 50),        // Contact
 
                 // ========== TRANSPORT ==========
-                OPE_CTRA = ApplyTransportCodeRule(dynamics.CarrierCode),     // RG3
+                OPE_CTRA = ApplyTransportCodeRule(dynamics.CarrierCode),     // RG3 ✅ CORRECT
 
                 // ========== COMMENTAIRES ==========
-                OPE_COBP = _textProcessor.ProcessName(dynamics.CommentPreparation, 255), // Commentaire Préparation
-                OPE_COBL = _textProcessor.ProcessName(dynamics.CommentExpedition, 255),  // Commentaire Livraison
+                OPE_COBP = _textProcessor.ProcessName(dynamics.CommentPreparation, 255), // Commentaire Préparation ✅ CORRECT
 
-                // ========== AUTRES CHAMPS ==========
-                OPE_ALPHA21 = _textProcessor.ProcessCode(dynamics.SalesOriginId),   // Canal de Ventes
-                OPE_ALPHA6 = _textProcessor.ProcessCode(dynamics.SegmentId),        // Segment
-                OPE_ALPHA31 = dynamics.SellableDays.ToString(),                     // Famille Classification (BASE)
+                // ✅ CORRIGÉ : CommentExpedition va dans OPE_COME pas OPE_COBL
+                OPE_COME = _textProcessor.ProcessName(dynamics.CommentExpedition, 255),  // Commentaire Expedition
+                OPE_COBL = "", // Vide selon mapping
 
-                // ✅ NOUVEAU : Champs OPE_ALPHA > 38 (exemple - à adapter selon vos besoins)
-                OPE_ALPHA39 = _textProcessor.ProcessCode(dynamics.SubsegmentId),      // Sous-Segment
-                OPE_ALPHA41 = _textProcessor.ProcessCode(dynamics.CardTypeRemer),     // Type Carte Remerciement
-                OPE_ALPHA42 = _textProcessor.ProcessCode(dynamics.BROrderGrouping),   // Code Regroupement
-                OPE_ALPHA43 = dynamics.BRPreparationEnum.ToString(),                  // Délai Préparation
+                // ========== AUTRES CHAMPS SELON MAPPING CLIENT ==========
+                OPE_ALPHA21 = _textProcessor.ProcessCode(dynamics.SalesOriginId),   // Canal de Ventes ✅ CORRECT
+                OPE_ALPHA6 = _textProcessor.ProcessCode(dynamics.SegmentId),        // Segment ✅ CORRECT
+                OPE_ALPHA31 = dynamics.SellableDays.ToString(),                     // Famille Classification (BASE) ✅ CORRECT
 
-                // ========== CHAMPS VIDES (selon votre fichier exemple) ==========
+                // ✅ NOUVEAUX CHAMPS SELON MAPPING CLIENT :
+                OPE_ALPHA45 = _textProcessor.ProcessCode(dynamics.CardTypeRemer),     // Type Carte Remerciement
+                OPE_ALPHA46 = _textProcessor.ProcessCode(dynamics.BRTransportModeCode), // Type Transport Si Dangereux
+                OPE_ALPHA47 = _textProcessor.ProcessCode(dynamics.BoxTypeBtc),        // Type Boite BtC
+                OPE_ALPHA48 = _textProcessor.ProcessCode(dynamics.DlvTermId),         // Incoterm
+                OPE_GRP = _textProcessor.ProcessCode(dynamics.BROrderGrouping),       // Code Regroupement
+                OPE_MPCO = _textProcessor.ProcessCode(dynamics.BRPackingCode),        // Type Conditionnement
+                OPE_UNICODE11 = _textProcessor.ProcessName(dynamics.MessagePerso, 255), // Message Personnalisé
+                OPE_TOP25 = dynamics.BRPreparationEnum,                              // Délai Préparation (TINYINT)
+                OPE_TOP28 = dynamics.BRShippingDocumentEnum.ToString(),              // Documentation Expédition
+
+                // ✅ CORRECTIONS SELON MAPPING CLIENT :
+                // CarrierServiceCode va dans ALPHA40@ALPHA41 pas ALPHA16@ALPHA18
+                // (voir ProcessCarrierService modifié ci-dessous)
+
+                // ========== ANCIENS CHAMPS À SUPPRIMER ==========
+                // OPE_ALPHA39, OPE_ALPHA42, OPE_ALPHA43 ne sont pas dans le mapping client
+
+                // ========== CHAMPS VIDES ==========
                 OPE_ADR4 = "",
                 OPE_FAX = "",
                 OPE_ALPHA1 = "",
@@ -156,11 +175,13 @@ namespace DynamicsToXmlTranslator.Mappers
             };
 
             // ========== TRAITEMENT SPÉCIAUX ==========
-            ProcessAddress(dynamics.Street, header);                          // Répartition adresse sur 3 champs
-            ProcessCarrierService(dynamics.CarrierServiceCode, header);       // RG4 : séparation par @
+            ProcessAddress(dynamics.Street, header);
+            ProcessCarrierServiceCorrected(dynamics.CarrierServiceCode, header); // ✅ MODIFIÉ
 
             return header;
         }
+
+
 
         /// <summary>
         /// Crée une ligne de commande selon le format OPL
@@ -171,20 +192,22 @@ namespace DynamicsToXmlTranslator.Mappers
             {
                 // ========== VALEURS PRINCIPALES ==========
                 ACT_CODE = "COSMETIQUE",
-                OPL_RCDO = _textProcessor.ProcessCode(dynamics.transRefId),   // CLÉ DE LIAISON
-                OPL_RLDO = lineNumber.ToString(),                             // Numéro ligne (1, 2, etc.)
-                ART_CODE = _textProcessor.ProcessCode(dynamics.itemId),       // Référence article
-                OPL_QTAP = dynamics.qty,                                     // Quantité
-                QUA_CODE = ApplyQualityCodeRule(dynamics.PdsDispositionCode), // Code Qualité
+                OPL_RCDO = _textProcessor.ProcessCode(dynamics.transRefId),   // CLÉ DE LIAISON ✅ CORRECT
+                OPL_RLDO = lineNumber.ToString(),                             // Numéro ligne ✅ CORRECT
+                ART_CODE = _textProcessor.ProcessCode(dynamics.itemId),       // Référence article ✅ CORRECT
+                OPL_QTAP = dynamics.qty,                                     // Quantité ✅ CORRECT
 
-                // ========== TRAÇABILITÉ ==========
-                OPL_LOT1 = _textProcessor.ProcessCode(dynamics.inventBatchId),    // Lot
-                OPL_LOT2 = _textProcessor.ProcessCode(dynamics.inventSerialId),   // Lot 2
-                OPL_DLOO = FormatDateForTxt(dynamics.expDate),                    // DLUO
-                OPL_NoSU = _textProcessor.ProcessCode(dynamics.LicensePlateId),   // Support
+                // ✅ CORRIGÉ : Mapping selon client
+                QUA_CODE = ApplyQualityCodeRuleCorrected(dynamics.PdsDispositionCode), // Code Qualité
 
-                // ========== CONDITIONNEMENT (selon votre exemple) ==========
-                OPL_CONDITIONNEMENT = ApplyConditionnementRule(dynamics.BRPackingCode),
+                // ✅ CORRIGÉ : Mapping inversé selon client
+                OPL_LOT1 = _textProcessor.ProcessCode(dynamics.inventSerialId),   // Lot 1 = inventSerialId
+                OPL_LOT2 = _textProcessor.ProcessCode(dynamics.inventBatchId),    // Lot 2 = inventBatchId
+                OPL_DLOO = FormatDateForTxt(dynamics.expDate),                    // DLUO = expDate ✅ CORRECT
+                OPL_NoSU = _textProcessor.ProcessCode(dynamics.LicensePlateId),   // Support ✅ CORRECT
+
+                // ========== CONDITIONNEMENT ==========
+                OPL_CONDITIONNEMENT = ApplyConditionnementRule(dynamics.BRPackingCode), // ✅ CORRECT
 
                 // ========== POIDS/VOLUME ==========
                 OPL_POIDS = 0, // À calculer selon vos règles métier
@@ -219,6 +242,56 @@ namespace DynamicsToXmlTranslator.Mappers
 
             // Par défaut, utiliser la référence commande
             return _textProcessor.ProcessCode(dynamics.transRefId);
+        }
+
+        /// <summary>
+        /// ✅ CORRIGÉ : Code Qualité selon mapping client (DISP par défaut)
+        /// </summary>
+        private string ApplyQualityCodeRuleCorrected(string? qualityCode)
+        {
+            if (string.IsNullOrEmpty(qualityCode))
+                return "DISP"; // ✅ CORRIGÉ : DISP par défaut selon client
+
+            string cleanCode = _textProcessor.ProcessText(qualityCode).ToUpper().Trim();
+
+            // TODO: Utiliser la table de correspondance fournie par le client
+            return cleanCode switch
+            {
+                "STANDARD" or "STD" => "STD",
+                "BLOCKED_LOGISTICS" or "BQLOG" => "BQLOG",
+                "BLOCKED_QA1" or "BQQA1" => "BQQA1",
+                "BLOCKED_QA2" or "BQQA2" => "BQQA2",
+                "LIBERE" or "LIBRE" => "STD",
+                _ => "DISP" // ✅ CORRIGÉ : Par défaut DISP
+            };
+        }
+
+        /// <summary>
+        /// ✅ CORRIGÉ : Traitement du service transporteur selon mapping client (ALPHA40@ALPHA41)
+        /// </summary>
+        private void ProcessCarrierServiceCorrected(string? carrierServiceCode, SpeedPackingSlipHeader header)
+        {
+            if (string.IsNullOrEmpty(carrierServiceCode))
+            {
+                header.OPE_ALPHA40 = "BR";
+                header.OPE_ALPHA41 = "";
+                return;
+            }
+
+            string cleanService = _textProcessor.ProcessCode(carrierServiceCode);
+
+            // Séparer par @
+            var parts = cleanService.Split('@');
+
+            if (parts.Length >= 1)
+            {
+                header.OPE_ALPHA40 = parts[0].Trim();
+            }
+
+            if (parts.Length >= 2)
+            {
+                header.OPE_ALPHA41 = parts[1].Trim();
+            }
         }
 
         /// <summary>

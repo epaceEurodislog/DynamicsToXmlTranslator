@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using DynamicsToXmlTranslator.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using static DynamicsToXmlTranslator.Models.SpeedPackingSlipHeader;
 
 namespace DynamicsToXmlTranslator.Services
 {
@@ -66,13 +67,13 @@ namespace DynamicsToXmlTranslator.Services
 
             try
             {
-                // Générer le timestamp pour les 2 fichiers
-                string timestamp = DateTime.Now.ToString("yyyy-MM-dd_HHhMMmss", CultureInfo.InvariantCulture);
-                string fileTimestamp = DateTime.Now.ToString("yyyyMMdd_HHmmssff", CultureInfo.InvariantCulture);
+                // PAR :
+                string dateFormat = DateTime.Now.ToString("yyyyMMdd", CultureInfo.InvariantCulture);
+                string timeFormat = DateTime.Now.ToString("HHmmss", CultureInfo.InvariantCulture);
 
                 // Noms des fichiers
-                string headerFileName = $"CDEN_{fileNamePrefix}_{timestamp}_{fileTimestamp}.TXT";
-                string linesFileName = $"CDLG_{fileNamePrefix}_{timestamp}_{fileTimestamp}.TXT";
+                string headerFileName = $"CDEN_COSMETIQUE_{dateFormat}_{timeFormat}.TXT";
+                string linesFileName = $"CDLG_COSMETIQUE_{dateFormat}_{timeFormat}.TXT";
 
                 string headerFilePath = Path.Combine(_exportDirectory, headerFileName);
                 string linesFilePath = Path.Combine(_exportDirectory, linesFileName);
