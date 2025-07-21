@@ -193,55 +193,56 @@ namespace DynamicsToXmlTranslator.Services
 
         /// <summary>
         /// Formate une ligne d'en-tête selon l'ordre exact des colonnes OPE
+        /// ✅ MODIFIÉ : Gestion du format spécial pour OPE_ALPHA31
         /// </summary>
         private string FormatHeaderLine(SpeedPackingSlipHeader header)
         {
             // Créer un tableau avec toutes les valeurs dans l'ordre exact des en-têtes
             var values = new string[]
             {
-                header.ACT_CODE ?? "",                    // ACT_CODE
-                header.OPE_DACO ?? "",                    // OPE_DACO
-                header.OPE_REDO ?? "",                    // OPE_REDO
-                header.TIE_CODE ?? "",                    // TIE_CODE
-                header.OPE_RTIE ?? "",                    // OPE_RTIE
-                header.TIE_NOM ?? "",                     // TIE_NOM
-                header.OPE_ADR1 ?? "",                    // OPE_ADR1
-                header.OPE_ADR2 ?? "",                    // OPE_ADR2
-                header.OPE_ADR3 ?? "",                    // OPE_ADR3
-                header.OPE_ADR4 ?? "",                    // OPE_ADR4
-                header.OPE_ADVL ?? "",                    // OPE_ADVL
-                header.OPE_ADCP ?? "",                    // OPE_ADCP
-                header.OPE_CPAY ?? "",                    // OPE_CPAY
-                header.OPE_COBP ?? "",                    // OPE_COBP
-                header.OPE_COBL ?? "",                    // OPE_COBL
-                header.OPE_DALI ?? "",                    // OPE_DALI
-                header.OPE_CTRA ?? "",                    // OPE_CTRA
-                header.OPE_ALPHA16 ?? "",                 // OPE_ALPHA16
-                header.OPE_ALPHA17 ?? "",                 // OPE_ALPHA17
-                header.OPE_ALPHA18 ?? "",                 // OPE_ALPHA18
-                header.OPE_ALPHA19 ?? "",                 // OPE_ALPHA19
-                header.OPE_ALPHA20 ?? "",                 // OPE_ALPHA20
-                header.OPE_ALPHA21 ?? "",                 // OPE_ALPHA21
-                header.OPE_ALPHA22 ?? "",                 // OPE_ALPHA22
-                header.OPE_ALPHA23 ?? "",                 // OPE_ALPHA23
-                header.OPE_ALPHA24 ?? "",                 // OPE_ALPHA24
-                header.OPE_ALPHA25 ?? "",                 // OPE_ALPHA25
-                header.OPE_TEL ?? "",                     // OPE_TEL
-                header.OPE_FAX ?? "",                     // OPE_FAX
-                header.OPE_IMEL ?? "",                    // OPE_IMEL
-                header.OPE_ALPHA1 ?? "",                  // OPE_ALPHA1
-                header.OPE_ALPHA5 ?? "",                  // OPE_ALPHA5
-                header.OPE_ALPHA6 ?? "",                  // OPE_ALPHA6
-                header.OPE_ALPHA9 ?? "",                  // OPE_ALPHA9
-                header.OPE_ALPHA15 ?? "",                 // OPE_ALPHA15
-                header.OPE_DATE15 ?? "",                  // OPE_DATE15
-                header.OPE_ALPHA31 ?? "",                 // OPE_ALPHA31
-                header.OPE_ALPHA34 ?? "",                 // OPE_ALPHA34
-                header.OPE_ALPHA35 ?? "",                 // OPE_ALPHA35
-                header.OPE_ALPHA36 ?? "",                 // OPE_ALPHA36
-                header.OPE_ALPHA37 ?? "",                 // OPE_ALPHA37
-                header.OPE_ALPHA38 ?? "",                 // OPE_ALPHA38
-                header.OPE_TOP17 ?? "0"                   // OPE_TOP17
+        header.ACT_CODE ?? "",                    // ACT_CODE
+        header.OPE_DACO ?? "",                    // OPE_DACO
+        header.OPE_REDO ?? "",                    // OPE_REDO
+        header.TIE_CODE ?? "",                    // TIE_CODE
+        header.OPE_RTIE ?? "",                    // OPE_RTIE
+        header.TIE_NOM ?? "",                     // TIE_NOM
+        header.OPE_ADR1 ?? "",                    // OPE_ADR1
+        header.OPE_ADR2 ?? "",                    // OPE_ADR2
+        header.OPE_ADR3 ?? "",                    // OPE_ADR3
+        header.OPE_ADR4 ?? "",                    // OPE_ADR4
+        header.OPE_ADVL ?? "",                    // OPE_ADVL
+        header.OPE_ADCP ?? "",                    // OPE_ADCP
+        header.OPE_CPAY ?? "",                    // OPE_CPAY
+        header.OPE_COBP ?? "",                    // OPE_COBP
+        header.OPE_COBL ?? "",                    // OPE_COBL
+        header.OPE_DALI ?? "",                    // OPE_DALI
+        header.OPE_CTRA ?? "",                    // OPE_CTRA
+        header.OPE_ALPHA16 ?? "",                 // OPE_ALPHA16
+        header.OPE_ALPHA17 ?? "",                 // OPE_ALPHA17
+        header.OPE_ALPHA18 ?? "",                 // OPE_ALPHA18
+        header.OPE_ALPHA19 ?? "",                 // OPE_ALPHA19
+        header.OPE_ALPHA20 ?? "",                 // OPE_ALPHA20
+        header.OPE_ALPHA21 ?? "",                 // OPE_ALPHA21
+        header.OPE_ALPHA22 ?? "",                 // OPE_ALPHA22
+        header.OPE_ALPHA23 ?? "",                 // OPE_ALPHA23
+        header.OPE_ALPHA24 ?? "",                 // OPE_ALPHA24
+        header.OPE_ALPHA25 ?? "",                 // OPE_ALPHA25
+        header.OPE_TEL ?? "",                     // OPE_TEL
+        header.OPE_FAX ?? "",                     // OPE_FAX
+        header.OPE_IMEL ?? "",                    // OPE_IMEL
+        header.OPE_ALPHA1 ?? "",                  // OPE_ALPHA1
+        header.OPE_ALPHA5 ?? "",                  // OPE_ALPHA5
+        header.OPE_ALPHA6 ?? "",                  // OPE_ALPHA6
+        header.OPE_ALPHA9 ?? "",                  // OPE_ALPHA9
+        header.OPE_ALPHA15 ?? "",                 // OPE_ALPHA15
+        header.OPE_DATE15 ?? "",                  // OPE_DATE15
+        header.GetFormattedOpeAlpha31(),          // ✅ MODIFIÉ : FORMAT SPÉCIAL
+        header.OPE_ALPHA34 ?? "",                 // OPE_ALPHA34
+        header.OPE_ALPHA35 ?? "",                 // OPE_ALPHA35
+        header.OPE_ALPHA36 ?? "",                 // OPE_ALPHA36
+        header.OPE_ALPHA37 ?? "",                 // OPE_ALPHA37
+        header.OPE_ALPHA38 ?? "",                 // OPE_ALPHA38
+        header.OPE_TOP17 ?? "0"                   // OPE_TOP17
             };
 
             // Nettoyer les valeurs pour éviter les problèmes avec les séparateurs
@@ -289,20 +290,21 @@ namespace DynamicsToXmlTranslator.Services
         }
 
         /// <summary>
-        /// Nettoie une valeur pour l'export TXT (supprime les caractères problématiques)
+        /// ✅ MODIFIÉ : Nettoie une valeur pour l'export TXT en préservant les caractères spéciaux du format
         /// </summary>
         private string CleanValueForTxt(string value)
         {
             if (string.IsNullOrEmpty(value))
                 return "";
 
-            // Supprimer les caractères qui pourraient poser problème
+            // ✅ NOUVEAU : Préserver les caractères [ ] _ pour le format spécial OPE_ALPHA31
             return value
                 .Replace("|", " ")      // Remplacer le séparateur par un espace
                 .Replace("\r", " ")     // Remplacer les retours chariot
                 .Replace("\n", " ")     // Remplacer les sauts de ligne
                 .Replace("\t", " ")     // Remplacer les tabulations
                 .Trim();                // Supprimer les espaces en début/fin
+                                        // Note : On garde [ ] _ pour le format spécial
         }
 
         /// <summary>

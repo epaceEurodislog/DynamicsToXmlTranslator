@@ -42,13 +42,48 @@ namespace DynamicsToXmlTranslator.Models
         public string OPE_ALPHA9 { get; set; } = "";                     // Vide
         public string OPE_ALPHA15 { get; set; } = "";                    // Vide
         public string OPE_DATE15 { get; set; } = "";                     // Vide
-        public string OPE_ALPHA31 { get; set; } = "";                    // SellableDays → Famille Classification
+        public string OPE_ALPHA31 { get; set; } = "";                    // SellableDays → Famille Classification + FORMAT SPÉCIAL
         public string OPE_ALPHA34 { get; set; } = "";                    // Vide
         public string OPE_ALPHA35 { get; set; } = "";                    // Vide
         public string OPE_ALPHA36 { get; set; } = "";                    // Vide
         public string OPE_ALPHA37 { get; set; } = "";                    // Vide
         public string OPE_ALPHA38 { get; set; } = "";                    // Vide
         public string OPE_TOP17 { get; set; } = "0";                     // Fixe à 0
+
+        // ✅ NOUVEAU : Champs virtuels pour OPE_ALPHA > 38 (stockés dans OPE_ALPHA31)
+        public string OPE_ALPHA39 { get; set; } = "";                    // Stocké dans OPE_ALPHA31
+        public string OPE_ALPHA40 { get; set; } = "";                    // Stocké dans OPE_ALPHA31  
+        public string OPE_ALPHA41 { get; set; } = "";                    // Stocké dans OPE_ALPHA31
+        public string OPE_ALPHA42 { get; set; } = "";                    // Stocké dans OPE_ALPHA31
+        public string OPE_ALPHA43 { get; set; } = "";                    // Stocké dans OPE_ALPHA31
+
+        /// <summary>
+        /// ✅ NOUVEAU : Construit le format spécial pour OPE_ALPHA31
+        /// Format: donneralpha31[donneealpha39_donneealpha41_donneealpha42_donneealpha43]
+        /// </summary>
+        public string GetFormattedOpeAlpha31()
+        {
+            // Valeur de base (SellableDays)
+            string baseValue = OPE_ALPHA31 ?? "";
+
+            // Collecter les valeurs des champs > 38 (en excluant ALPHA40 selon votre exemple)
+            var extraValues = new List<string>();
+
+            if (!string.IsNullOrEmpty(OPE_ALPHA39)) extraValues.Add(OPE_ALPHA39);
+            if (!string.IsNullOrEmpty(OPE_ALPHA41)) extraValues.Add(OPE_ALPHA41);
+            if (!string.IsNullOrEmpty(OPE_ALPHA42)) extraValues.Add(OPE_ALPHA42);
+            if (!string.IsNullOrEmpty(OPE_ALPHA43)) extraValues.Add(OPE_ALPHA43);
+
+            // Si pas de valeurs supplémentaires, retourner la valeur de base
+            if (!extraValues.Any())
+            {
+                return baseValue;
+            }
+
+            // Construire le format spécial : valeurBase[extra1_extra2_extra3_extra4]
+            string extraPart = string.Join("_", extraValues);
+            return $"{baseValue}[{extraPart}]";
+        }
     }
 
     /// <summary>

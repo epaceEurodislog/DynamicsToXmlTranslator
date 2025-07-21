@@ -56,7 +56,7 @@ namespace DynamicsToXmlTranslator.Mappers
                 result.Header = CreateHeader(dynamics);
 
                 // ========== CRÉER LES LIGNES (une par article) ==========
-                int lineNumber = 10000; // Commencer à 10000 selon votre exemple
+                int lineNumber = 1; // Commencer à 10000 selon votre exemple
                 foreach (var packingSlip in packingSlipsGroup)
                 {
                     if (packingSlip.DynamicsData != null)
@@ -65,7 +65,7 @@ namespace DynamicsToXmlTranslator.Mappers
                         if (line != null)
                         {
                             result.Lines.Add(line);
-                            lineNumber += 10000; // Incrémenter par 10000
+                            lineNumber += 1; // Incrémenter par 1
                         }
                     }
                 }
@@ -88,13 +88,14 @@ namespace DynamicsToXmlTranslator.Mappers
 
         /// <summary>
         /// Crée l'en-tête de commande selon le format OPE
+        /// ✅ MODIFIÉ : Gestion des champs OPE_ALPHA > 38
         /// </summary>
         private SpeedPackingSlipHeader CreateHeader(DynamicsPackingSlip dynamics)
         {
             var header = new SpeedPackingSlipHeader
             {
                 // ========== VALEURS FIXES ==========
-                ACT_CODE = "LTRF",
+                ACT_CODE = "COSMETIQUE",
                 OPE_TOP17 = "0",
 
                 // ========== DATES ==========
@@ -125,7 +126,13 @@ namespace DynamicsToXmlTranslator.Mappers
                 // ========== AUTRES CHAMPS ==========
                 OPE_ALPHA21 = _textProcessor.ProcessCode(dynamics.SalesOriginId),   // Canal de Ventes
                 OPE_ALPHA6 = _textProcessor.ProcessCode(dynamics.SegmentId),        // Segment
-                OPE_ALPHA31 = dynamics.SellableDays.ToString(),                     // Famille Classification
+                OPE_ALPHA31 = dynamics.SellableDays.ToString(),                     // Famille Classification (BASE)
+
+                // ✅ NOUVEAU : Champs OPE_ALPHA > 38 (exemple - à adapter selon vos besoins)
+                OPE_ALPHA39 = _textProcessor.ProcessCode(dynamics.SubsegmentId),      // Sous-Segment
+                OPE_ALPHA41 = _textProcessor.ProcessCode(dynamics.CardTypeRemer),     // Type Carte Remerciement
+                OPE_ALPHA42 = _textProcessor.ProcessCode(dynamics.BROrderGrouping),   // Code Regroupement
+                OPE_ALPHA43 = dynamics.BRPreparationEnum.ToString(),                  // Délai Préparation
 
                 // ========== CHAMPS VIDES (selon votre fichier exemple) ==========
                 OPE_ADR4 = "",
@@ -163,9 +170,9 @@ namespace DynamicsToXmlTranslator.Mappers
             var line = new SpeedPackingSlipLine
             {
                 // ========== VALEURS PRINCIPALES ==========
-                ACT_CODE = "LTRF",
+                ACT_CODE = "COSMETIQUE",
                 OPL_RCDO = _textProcessor.ProcessCode(dynamics.transRefId),   // CLÉ DE LIAISON
-                OPL_RLDO = lineNumber.ToString(),                             // Numéro ligne (10000, 20000, etc.)
+                OPL_RLDO = lineNumber.ToString(),                             // Numéro ligne (1, 2, etc.)
                 ART_CODE = _textProcessor.ProcessCode(dynamics.itemId),       // Référence article
                 OPL_QTAP = dynamics.qty,                                     // Quantité
                 QUA_CODE = ApplyQualityCodeRule(dynamics.PdsDispositionCode), // Code Qualité
@@ -323,7 +330,7 @@ namespace DynamicsToXmlTranslator.Mappers
         {
             if (string.IsNullOrEmpty(carrierServiceCode))
             {
-                header.OPE_ALPHA16 = "";
+                header.OPE_ALPHA16 = "BR";
                 header.OPE_ALPHA18 = "";
                 return;
             }
@@ -455,7 +462,7 @@ namespace DynamicsToXmlTranslator.Mappers
                    $"  SalesOriginId: '{dynamics.SalesOriginId}' → OPE_ALPHA21 (traité UTF-8)\n" +
                    $"  SegmentId: '{dynamics.SegmentId}' → OPE_ALPHA6 (traité UTF-8)\n" +
                    $"  SellableDays: {dynamics.SellableDays} → OPE_ALPHA31\n" +
-                   $"  ACT_CODE: 'LTRF' (fixe)\n" +
+                   $"  ACT_CODE: 'COSMETIQUE' (fixe)\n" +
                    $"  OPE_TOP17: '0' (fixe)\n" +
                    $"  ✅ TOUS LES CHAMPS TEXTE TRAITÉS AVEC NORMALISATION UTF-8\n" +
                    $"  ✅ GESTION AUTOMATIQUE DES ADRESSES > 50 CARACTÈRES\n" +
