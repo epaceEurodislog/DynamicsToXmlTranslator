@@ -2,44 +2,83 @@
 
 ## 📄 Description
 
-**DynamicsToXmlTranslator** est un outil de traduction automatisé de données Dynamics 365 vers des fichiers XML compatibles WINDEV. Il extrait les articles depuis une base de données **SQL Server** et les convertit au format XML en mode complètement autonome.
+**DynamicsToXmlTranslator** est un outil de traduction automatisé qui convertit les données Dynamics 365 en fichiers XML/TXT compatibles avec les systèmes WINDEV/SPEED. Il supporte l'export de 5 types d'entités depuis une base de données SQL Server.
+
+### ✨ Fonctionnalités principales
+
+- **Articles** → XML WINDEV (avec exclusion ART_STAT=3)
+- **Purchase Orders** → XML CF_ATTENDUS_COSMETIQUE
+- **Return Orders** → XML CF_ATTENDUS_COSMETIQUE
+- **Transfer Orders** → XML CF_ATTENDUS_COSMETIQUE
+- **Packing Slips** → 2 fichiers TXT SPEED (CDEN + CDLG)
+- **Traitement UTF-8** automatique de tous les caractères spéciaux
+- **Mode Test** et **Mode Production** avec marquage automatique
+- **Export par lots** pour gros volumes
+- **Logs complets** et traçabilité
 
 ## 🏗️ Architecture Technique
 
-### **Technologies utilisées :**
+### **Technologies utilisées**
 
-- **.NET 6.0** (Console Application)
-- **C#** pour la logique métier
-- **SQL Server** pour le stockage de données (table JSON_IN)
-- **XML Serialization** pour la génération des fichiers
-- **Serilog** pour les logs
-- **Microsoft.Extensions** pour la configuration
+- **.NET 8.0** (Console Application)
+- **C#** avec services d'injection de dépendances
+- **SQL Server** comme source de données (table JSON_IN)
+- **Serilog** pour les logs rotatifs
+- **Traitement UTF-8** avancé avec Utf8TextProcessor
 
-### **Fichiers de code principaux :**
-
-**📁 Emplacement des fichiers :**
+### **Structure du projet**
 
 ```
 DynamicsToXmlTranslator/
-├── Program.cs                    # ← Point d'entrée automatisé (sans menu)
+├── Program.cs                           # Point d'entrée automatisé
 ├── Models/
-│   ├── Article.cs               # ← Modèle des articles Dynamics
-│   └── WinDevArticle.cs         # ← Structure XML WINDEV
-├── Mappers/
-│   └── ArticleMapper.cs         # ← Logique de transformation
+│   ├── Article.cs                       # Modèle Articles Dynamics
+│   ├── WinDevArticle.cs                 # Structure XML Articles WINDEV
+│   ├── PurchaseOrder.cs                 # Modèle Purchase Orders
+│   ├── WinDevPurchaseOrder.cs           # Structure XML Purchase Orders
+│   ├── ReturnOrder.cs                   # Modèle Return Orders
+│   ├── WinDevReturnOrder.cs             # Structure XML Return Orders
+│   ├── TransferOrder.cs                 # Modèle Transfer Orders
+│   ├── WinDevTransferOrder.cs           # Structure XML Transfer Orders
+│   ├── PackingSlip.cs                   # Modèle Packing Slips
+│   └── SpeedPackingSlip.cs              # Structures TXT SPEED
 ├── Services/
-│   ├── DatabaseService.cs       # ← Accès base de données SQL Server
-│   └── XmlExportService.cs      # ← Génération fichiers XML
-├── DynamicsToXmlTranslator.csproj   # ← Configuration projet
-├── appsettings.json.example     # ← Template configuration
-└── appsettings.json             # ← Configuration (à créer)
+│   ├── DatabaseService.cs               # Accès BDD Articles
+│   ├── XmlExportService.cs              # Export XML Articles
+│   ├── PurchaseOrderDatabaseService.cs  # Accès BDD Purchase Orders
+│   ├── PurchaseOrderXmlExportService.cs # Export XML Purchase Orders
+│   ├── ReturnOrderDatabaseService.cs    # Accès BDD Return Orders
+│   ├── ReturnOrderXmlExportService.cs   # Export XML Return Orders
+│   ├── TransferOrderDatabaseService.cs  # Accès BDD Transfer Orders
+│   ├── TransferOrderXmlExportService.cs # Export XML Transfer Orders
+│   ├── PackingSlipDatabaseService.cs    # Accès BDD Packing Slips
+│   ├── PackingSlipTxtExportService.cs   # Export TXT Packing Slips
+│   └── Utf8TextProcessor.cs             # Traitement UTF-8 avancé
+├── Mappers/
+│   ├── ArticleMapper.cs                 # Mapping Articles + exclusions ART_STAT=3
+│   ├── PurchaseOrderMapper.cs           # Mapping Purchase Orders
+│   ├── ReturnOrderMapper.cs             # Mapping Return Orders
+│   ├── TransferOrderMapper.cs           # Mapping Transfer Orders
+│   └── PackingSlipMapper.cs             # Mapping Packing Slips + RG métier
+├── DynamicsToXmlTranslator.csproj       # Configuration .NET 8.0
+├── appsettings.json.example             # Template configuration
+├── appsettings.json                     # Configuration (à créer)
+├── build.bat                            # Script de compilation Windows
+└── README.md                            # Cette documentation
 ```
 
 ## ⚙️ Configuration
 
-### **1. Fichier de configuration**
+### **1. Prérequis système**
 
-**📄 Fichier à créer :** `appsettings.json`
+- **.NET 8.0 SDK** installé
+- **SQL Server** accessible (version 2016+)
+- **Base Middleware** avec table JSON_IN peuplée
+- **Permissions** lecture/écriture sur la base et dossier exports
+
+### **2. Configuration appsettings.json**
+
+Créer le fichier `appsettings.json` à la racine :
 
 ```json
 {
@@ -67,487 +106,399 @@ DynamicsToXmlTranslator/
 }
 ```
 
-### **2. Structure de base de données attendue**
+### **3. Structure base de données requise**
 
-**📄 Table requise :** `JSON_IN` (base Middleware SQL Server)
+**Table principale :** `JSON_IN` (base Middleware SQL Server)
 
 ```sql
--- Table JSON_IN dans la base Middleware
--- Colonnes utilisées :
-JSON_KEYU    (INT)         -- ID unique
-JSON_DATA    (NVARCHAR)    -- Données JSON de l'article
+-- Colonnes utilisées par le traducteur
+JSON_KEYU    (INT)         -- ID unique (PK)
+JSON_DATA    (NVARCHAR)    -- Données JSON de l'entité
 JSON_HASH    (NVARCHAR)    -- Hash de contrôle
-JSON_FROM    (NVARCHAR)    -- Source API
-JSON_BKEY    (NVARCHAR)    -- Clé business (format: ART_XXXXXX)
-JSON_CRDA    (DATETIME2)   -- Date de création
-JSON_STAT    (NVARCHAR)    -- Statut ('ACTIVE')
+JSON_FROM    (NVARCHAR)    -- Endpoint source API
+JSON_BKEY    (NVARCHAR)    -- Clé métier
+JSON_CRDA    (DATETIME2)   -- Date création
+JSON_STAT    (NVARCHAR)    -- Statut ('ACTIVE', 'DELETED')
 JSON_CCLI    (NVARCHAR)    -- Code client ('BR')
-JSON_TRTP    (INT)         -- Type de traitement (0=à exporter, 1=exporté)
-JSON_TRDA    (DATETIME2)   -- Date de traitement
-JSON_TREN    (NVARCHAR)    -- Entité de traitement ('SPEED')
+JSON_TRTP    (INT)         -- Traitement (0=à exporter, 1=exporté)
+JSON_TRDA    (DATETIME2)   -- Date traitement
+JSON_TREN    (NVARCHAR)    -- Entité traitement ('SPEED', 'SPEED_PO', etc.)
+JSON_SENT    (INT)         -- Envoyé (0/1)
 ```
 
-## 🚀 Installation et Lancement
+**Endpoints API reconnus :**
 
-### **Prérequis**
+- `data/BRINT34ReleasedProducts` → Articles
+- `data/BRINT32PurchOrderTables` → Purchase Orders
+- `data/BRINT32ReturnOrderTables` → Return Orders
+- `data/BRINT32TransferOrderTables` → Transfer Orders
+- `data/BRPackingSlipInterfaces` → Packing Slips
 
-- **.NET 6.0 SDK** installé
-- **SQL Server** en fonctionnement
-- **Base de données Middleware** avec table `JSON_IN` peuplée
-- **Accès** en lecture/écriture à la base
+## 🚀 Installation et Utilisation
 
-### **1. Installation des dépendances**
+### **1. Installation**
 
 ```bash
+# Cloner le projet
+git clone <repository-url>
 cd DynamicsToXmlTranslator
+
+# Restaurer les dépendances
 dotnet restore
-```
 
-### **2. Configuration**
-
-```bash
-# Créer le fichier de configuration
+# Créer la configuration
 cp appsettings.json.example appsettings.json
-
-# Éditer la configuration avec vos paramètres SQL Server
-nano appsettings.json
+# Éditer appsettings.json avec vos paramètres
 ```
 
-### **3. Compilation**
+### **2. Compilation**
 
 ```bash
 # Compilation simple
 dotnet build --configuration Release
 
-# Ou publication complète (recommandé)
+# Publication complète (recommandé)
 dotnet publish --configuration Release --self-contained true --runtime win-x64 --output ./publish --property:PublishSingleFile=true
+
+# Ou utiliser le script Windows
+build.bat
 ```
 
-### **4. Lancement automatique**
+### **3. Modes d'exécution**
+
+Le programme s'exécute automatiquement selon les arguments fournis :
+
+#### **Mode Production (par défaut)**
 
 ```bash
-# Mode production (nouveaux articles uniquement)
-dotnet run
-# ou
+# Tous les nouveaux éléments
 DynamicsToXmlTranslator.exe
 
-# Mode test (tous les articles, sans marquage)
-dotnet run test
+# Articles uniquement
+DynamicsToXmlTranslator.exe articles
+
+# Purchase Orders uniquement
+DynamicsToXmlTranslator.exe purchaseorders
 # ou
-DynamicsToXmlTranslator.exe test
+DynamicsToXmlTranslator.exe po
+
+# Return Orders uniquement
+DynamicsToXmlTranslator.exe returnorders
+# ou
+DynamicsToXmlTranslator.exe ro
+
+# Transfer Orders uniquement
+DynamicsToXmlTranslator.exe transferorders
+# ou
+DynamicsToXmlTranslator.exe to
+
+# Packing Slips uniquement
+DynamicsToXmlTranslator.exe packingslips
+# ou
+DynamicsToXmlTranslator.exe ps
 ```
 
-## 📋 Fonctionnalités
+#### **Mode Test**
 
-### **Mode d'exécution automatisé :**
+```bash
+# Tous les éléments (SANS marquage)
+DynamicsToXmlTranslator.exe test
 
-Le programme n'a plus de menu interactif. Il s'exécute directement selon le mode spécifié :
+# Articles en mode test
+DynamicsToXmlTranslator.exe test articles
 
-| **Mode** | **Commande** | **Description** |
-|----------|-------------|----------------|
-| **Production** | `DynamicsToXmlTranslator.exe` | Export des nouveaux articles uniquement |
-| **Test** | `DynamicsToXmlTranslator.exe test` | Export de TOUS les articles sans marquage |
+# Purchase Orders en mode test
+DynamicsToXmlTranslator.exe test po
 
-### **1. Mode Production (par défaut)**
+# etc.
+```
 
-- Exporte uniquement les **nouveaux articles** (`JSON_TRTP = 0`)
-- **Marque automatiquement** les articles comme exportés (`JSON_TRTP = 1`)
-- Génère des fichiers `ARTICLE_COSMETIQUE_YYYYMMDD_HHMMSS.XML`
-- **Usage :** Production quotidienne, automatisation
+### **4. Fichiers générés**
 
-### **2. Mode Test**
+#### **Articles**
 
-- Exporte **TOUS** les articles de la base
-- **N'effectue AUCUN marquage** (réexécutable à volonté)
-- Génère des fichiers `ARTICLE_TEST_COMPLET_YYYYMMDD_HHMMSS.XML`
-- **Usage :** Tests, validation, débogage
+- **Fichiers :** `ARTICLE_COSMETIQUE_YYYYMMDD_HHMMSS.XML`
+- **Format :** XML WINDEV avec balises `<WINDEV_TABLE>` et `<Table>`
+- **Règle spéciale :** Articles avec ART_STAT=3 automatiquement exclus
+
+#### **Purchase/Return/Transfer Orders**
+
+- **Fichiers :** `RECAT_COSMETIQUE_[TYPE]_ORDERS_YYYYMMDD_HHMMSS.XML`
+- **Format :** XML avec balises `<CF_ATTENDUS_COSMETIQUE>` et `<LIGNE>`
+
+#### **Packing Slips**
+
+- **Fichiers :** 2 fichiers TXT par export
+  - `CDEN_COSMETIQUE_YYYYMMDD_HHMMSS.TXT` (en-têtes de commandes)
+  - `CDLG_COSMETIQUE_YYYYMMDD_HHMMSS.TXT` (lignes d'articles)
+- **Format :** TXT délimité par `|` selon format SPEED
+- **Encodage :** ISO-8859-1
+
+## 🔧 Fonctionnalités Avancées
+
+### **1. Traitement UTF-8 automatique**
+
+Le service `Utf8TextProcessor` traite automatiquement :
+
+- **Caractères accentués** : à, é, è, ç, etc. → a, e, e, c, etc.
+- **Caractères spéciaux** : &, €, °, ©, etc. → et, EUR, deg, (C), etc.
+- **Guillemets typographiques** : " " ' ' → " " ' '
+- **Espaces insécables** et caractères de contrôle
+- **Règle spéciale** : & → "et" (pour noms d'entreprises)
+
+### **2. Règles métier intégrées**
+
+#### **Articles (ART_STAT)**
+
+- **ART_STAT=2** : ProductLifecycleStateId="Non" → Exportés
+- **ART_STAT=3** : Autres valeurs → **Exclus automatiquement**
+- **RG11** : UnitId vide → "UNITE"
+- **RG21** : Durée de vie par défaut → 1620 jours
+
+#### **Packing Slips (Règles RG1-RG4)**
+
+- **RG1** : BTB → Utilise PurchOrderFormNum
+- **RG2** : BTC → Utilise BRPortalOrderNumber
+- **RG3** : CarrierCode vide → "A AFFECTER"
+- **RG4** : CarrierServiceCode → Séparé par @ dans ALPHA40/ALPHA41
 
 ### **3. Export par lots automatique**
 
-- Si plus de 1000 articles : division automatique en plusieurs fichiers
-- Format : `ARTICLE_COSMETIQUE_LOT001_YYYYMMDD_HHMMSS.XML`
-- Marquage par lot pour traçabilité
+Si > 1000 éléments :
 
-### **4. Logs et traçabilité**
+- **Articles** : `ARTICLE_COSMETIQUE_LOT001_YYYYMMDD_HHMMSS.XML`
+- **Orders** : `RECAT_COSMETIQUE_[TYPE]_LOT001_YYYYMMDD_HHMMSS.XML`
+- **Packing Slips** : Paires de fichiers `CDEN_LOT001_xxx.TXT` + `CDLG_LOT001_xxx.TXT`
 
-- Logs détaillés dans `logs/translator.log`
-- Table de logs d'export : `xml_export_logs`
-- Codes de retour pour automatisation
-
-## 🔧 Architecture du Code
-
-### **Program.cs - Point d'entrée automatisé**
-
-**📄 Fonctions principales :**
-
-```csharp
-static async Task Main(string[] args)
-{
-    // Configuration automatique
-    SetupConfiguration();
-    SetupLogging();
-    SetupServices();
-
-    // Détection du mode (production/test)
-    bool isTestMode = IsTestMode(args);
-    
-    // Exécution automatique
-    if (isTestMode)
-        await ExportAllArticlesTestMode();    // Tous articles, pas de marquage
-    else
-        await ExportNewArticlesOnly();        // Nouveaux articles, avec marquage
-}
-```
-
-### **Models/Article.cs - Modèle adapté SQL Server**
-
-**📄 Classes mises à jour :**
-
-```csharp
-public class Article
-{
-    public int Id { get; set; }                    // JSON_KEYU
-    public string JsonData { get; set; }           // JSON_DATA
-    public string ContentHash { get; set; }        // JSON_HASH
-    public string? ApiEndpoint { get; set; }       // JSON_FROM
-    public string? ItemId { get; set; }            // Extrait de JSON_BKEY
-    public DateTime FirstSeenAt { get; set; }      // JSON_CRDA
-    public DateTime LastUpdatedAt { get; set; }    // JSON_CRDA
-    public DynamicsArticle? DynamicsData { get; set; }
-}
-
-public class DynamicsArticle
-{
-    // Nouveaux champs de l'API Dynamics mise à jour
-    public string? ItemId { get; set; }
-    public string? Name { get; set; }              // Remplace ItemName
-    public string? Category { get; set; }          // Nouveau champ
-    public string? ExternalItemId { get; set; }    // Nouveau champ
-    public decimal GrossWeight { get; set; }
-    public decimal Weight { get; set; }
-    public string? itemBarCode { get; set; }       // Remplace BarcodeNumber
-    public string? UnitId { get; set; }            // Remplace SalesUnitSymbol
-    public string? ProductLifecycleStateId { get; set; }
-    public string? ProducVersionAttribute { get; set; }
-    public int FactorColli { get; set; }           // Nouveau champ
-    public int FactorPallet { get; set; }          // Nouveau champ
-    public int PdsShelfLife { get; set; }          // Remplace ShelfLifePeriodDays
-    public int TrackingLot1 { get; set; }          // Nouveau champ
-    public int TrackingLot2 { get; set; }          // Nouveau champ
-    public int TrackingProoftag { get; set; }      // Nouveau champ
-    public int TrackingDLCDDLUO { get; set; }      // Nouveau champ
-    public string? OrigCountryRegionId { get; set; }
-    public int HMIMIndicator { get; set; }
-    public string? dataAreaId { get; set; }
-    // + dimensions brutes/nettes
-}
-```
-
-### **Services/DatabaseService.cs - Accès SQL Server**
-
-**📄 Méthodes principales :**
-
-```csharp
-public class DatabaseService
-{
-    // CORRIGÉ : Requêtes sur table JSON_IN
-    public async Task<List<Article>> GetAllArticlesAsync()           // Tous les articles
-    public async Task<List<Article>> GetNonExportedArticlesAsync()   // JSON_TRTP = 0
-    public async Task<List<Article>> GetArticlesSinceDateAsync()     // Depuis une date
-    public async Task MarkArticlesAsExportedAsync()                  // JSON_TRTP = 1
-    public async Task LogExportAsync()                               // Table xml_export_logs
-}
-```
-
-### **Services/XmlExportService.cs - Export optimisé**
-
-**📄 Nouvelles fonctionnalités :**
-
-```csharp
-public class XmlExportService
-{
-    // Export en un seul fichier avec marquage optionnel
-    public async Task<string?> ExportToXmlAsync(List<WinDevArticle> articles, List<int>? originalIds)
-    
-    // Export par lots pour gros volumes
-    public async Task<List<string>> ExportInBatchesAsync(List<WinDevArticle> articles, List<int>? originalIds, int batchSize)
-    
-    // Génération de fichier de test
-    public async Task<string?> GenerateTestXmlAsync()
-}
-```
-
-### **Mappers/ArticleMapper.cs - Règles métier**
-
-**📄 Mapping selon Excel de correspondance :**
-
-```csharp
-public class ArticleMapper
-{
-    public WinDevArticle? MapToWinDev(Article article)
-    {
-        // Transformation selon le document Excel fourni
-        // Application des règles métier (RG1 à RG21)
-        // Gestion des valeurs par défaut
-        // Transformation des catégories
-    }
-}
-```
-
-## 📊 Format XML Généré
-
-### **Structure du fichier de sortie :**
-
-```xml
-<?xml version="1.0" encoding="ISO-8859-1"?>
-<WINDEV_TABLE>
-    <Table>
-        <ACT_CODE>COSMETIQUE</ACT_CODE>
-        <ART_CCLI>BR</ART_CCLI>
-        <ART_CODE>BRSHSEBO500</ART_CODE>
-        <ART_CODC>SHSEBO500</ART_CODC>
-        <ART_DESL>SHAMPOING SEBORREGULATRICE 500ML</ART_DESL>
-        <ART_ALPHA2>ML</ART_ALPHA2>
-        <ART_EANU>3401360016484</ART_EANU>
-        <ART_ALPHA17>PF</ART_ALPHA17>
-        <ART_ALPHA3>FR</ART_ALPHA3>
-        <ART_STAT>3</ART_STAT>
-        <ART_POIU>500.000</ART_POIU>
-        <!-- + tous les autres champs selon Excel -->
-    </Table>
-    <!-- Répétition pour chaque article -->
-</WINDEV_TABLE>
-```
-
-### **Correspondance des champs (selon Excel) :**
-
-| **Dynamics 365 (API)**   | **WINDEV XML** | **Règle** | **Description** |
-|--------------------------|---------------|-----------|-----------------|
-| `dataAreaId`             | `ART_CCLI`    | Direct    | Code client/activité |
-| `"BR" + ItemId`          | `ART_CODE`    | Concat    | Code article complet |
-| `ItemId`                 | `ART_CODC`    | Direct    | Code article source |
-| `Name`                   | `ART_DESL`    | Direct    | Désignation article |
-| `UnitId`                 | `ART_ALPHA2`  | RG11      | UNITE si vide |
-| `itemBarCode`            | `ART_EANU`    | Direct    | Code-barres EAN |
-| `Category`               | `ART_ALPHA17` | Transform | PF/Machine/Echantillon/Autres |
-| `OrigCountryRegionId`    | `ART_ALPHA3`  | Direct    | Pays d'origine |
-| `ProductLifecycleStateId`| `ART_STAT`    | RG21      | "Non"="2", autres="3" |
-| `GrossWeight`            | `ART_POIU`    | Direct    | Poids brut |
-| `FactorColli`            | `ART_QTEC`    | Direct    | Facteur colis |
-| `FactorPallet`           | `ART_QTEP`    | RG8       | 0 si pas géré |
-| `PdsShelfLife`           | `ART_NUM19`   | RG10      | 1620 par défaut |
-
-## 🔄 Automatisation et Intégration
-
-### **1. Lancement via programme externe**
-
-```csharp
-// Exemple C# pour appeler le traducteur
-ProcessStartInfo startInfo = new ProcessStartInfo
-{
-    FileName = @"C:\Path\To\DynamicsToXmlTranslator.exe",
-    Arguments = "", // Mode production
-    UseShellExecute = false,
-    CreateNoWindow = true,
-    RedirectStandardOutput = true,
-    RedirectStandardError = true
-};
-
-using (Process process = Process.Start(startInfo))
-{
-    process.WaitForExit();
-    int exitCode = process.ExitCode; // 0 = succès, autre = erreur
-}
-```
-
-### **2. Tâche planifiée Windows**
+### **4. Statistiques et monitoring**
 
 ```bash
-# Créer une tâche qui s'exécute toutes les heures
-schtasks /create /tn "Export Dynamics XML" /tr "C:\Path\To\DynamicsToXmlTranslator.exe" /sc hourly
+# Le programme affiche automatiquement :
+📊 === STATISTIQUES ARTICLES ===
+📋 Total articles : 1250
+✅ Articles ART_STAT=2 (exportables) : 1100
+🚫 Articles ART_STAT=3 (exclus) : 150
+📈 Pourcentage d'exclusion : 12.0%
 ```
 
-### **3. Script PowerShell d'automatisation**
+## 📊 Monitoring et Logs
 
-```powershell
-# Script de lancement avec gestion d'erreurs
-$ExePath = "C:\Path\To\DynamicsToXmlTranslator.exe"
-$Process = Start-Process -FilePath $ExePath -Wait -PassThru -NoNewWindow
+### **1. Logs applicatifs**
 
-if ($Process.ExitCode -eq 0) {
-    Write-Host "✅ Export réussi"
-    # Traitement des fichiers XML générés...
-} else {
-    Write-Host "❌ Erreur lors de l'export"
-    # Gestion des erreurs...
-}
-```
+- **Localisation :** `logs/translator.log`
+- **Rotation :** Quotidienne (30 jours conservés)
+- **Taille max :** 10 MB par fichier
+- **Format :** `[YYYY-MM-DD HH:MM:SS] [LEVEL] Message`
 
-## 🐛 Résolution de Problèmes
+### **2. Tables de logs SQL**
 
-### **Erreur de connexion SQL Server**
+- `xml_export_logs` → Logs exports Articles
+- `xml_purchase_export_logs` → Logs Purchase Orders
+- `xml_return_export_logs` → Logs Return Orders
+- `xml_transfer_export_logs` → Logs Transfer Orders
+- `txt_packingslip_export_logs` → Logs Packing Slips
 
-```bash
-# Vérifier le service SQL Server
-services.msc
-
-# Tester la connexion
-sqlcmd -S localhost\SQLEXPRESS -U utilisateur -P motdepasse
-```
-
-### **Table JSON_IN inexistante ou vide**
+### **3. Requêtes de surveillance**
 
 ```sql
--- Vérifier l'existence de la table
-SELECT COUNT(*) FROM dbo.JSON_IN WHERE JSON_STAT = 'ACTIVE' AND JSON_CCLI = 'BR';
-
--- Vérifier les nouveaux articles
-SELECT COUNT(*) FROM dbo.JSON_IN WHERE JSON_TRTP = 0 OR JSON_TRTP IS NULL;
-```
-
-### **Aucun nouvel article à exporter**
-
-- Normal si tous les articles ont déjà été exportés
-- Utiliser le mode test pour vérifier : `DynamicsToXmlTranslator.exe test`
-- Vérifier les logs pour comprendre le filtrage
-
-### **Fichiers XML non générés**
-
-- Vérifier les permissions d'écriture du dossier `exports/`
-- Consulter `logs/translator.log` pour les détails
-- Vérifier l'espace disque disponible
-
-### **Erreur de mapping des articles**
-
-- Activer le mode test pour diagnostic
-- Vérifier la structure JSON dans `JSON_DATA`
-- Consulter les logs pour les articles en erreur
-
-## 📈 Monitoring et Maintenance
-
-### **Surveillance via requêtes SQL**
-
-```sql
--- Articles en attente d'export
+-- Articles en attente
 SELECT COUNT(*) as articles_en_attente
 FROM dbo.JSON_IN
 WHERE (JSON_TRTP = 0 OR JSON_TRTP IS NULL)
-AND JSON_STAT = 'ACTIVE' AND JSON_CCLI = 'BR';
+AND JSON_STAT = 'ACTIVE' AND JSON_CCLI = 'BR'
+AND JSON_FROM = 'data/BRINT34ReleasedProducts';
 
 -- Derniers exports
 SELECT TOP 10 * FROM xml_export_logs ORDER BY export_date DESC;
 
--- Articles exportés aujourd'hui
-SELECT COUNT(*) as exportes_aujourd_hui
+-- Statistiques par type
+SELECT
+    JSON_FROM as type_entite,
+    JSON_STAT as statut,
+    JSON_TRTP as traitement,
+    COUNT(*) as nb_elements
 FROM dbo.JSON_IN
-WHERE CAST(JSON_TRDA AS DATE) = CAST(GETDATE() AS DATE);
+WHERE JSON_CCLI = 'BR'
+GROUP BY JSON_FROM, JSON_STAT, JSON_TRTP
+ORDER BY JSON_FROM, JSON_TRTP;
 ```
 
-### **Nettoyage automatique**
+## 🔧 Développement et Extension
 
-```powershell
-# Supprimer les XML de plus de 30 jours
-Get-ChildItem -Path ".\exports" -Filter "*.XML" | 
-Where-Object {$_.LastWriteTime -lt (Get-Date).AddDays(-30)} | 
-Remove-Item -Force
-```
+### **1. Ajouter un nouveau type d'entité**
 
-### **Script de surveillance**
+1. **Créer le modèle** dans `Models/NouveauType.cs`
+2. **Créer le modèle WINDEV** dans `Models/WinDevNouveauType.cs`
+3. **Créer le service base** dans `Services/NouveauTypeDatabaseService.cs`
+4. **Créer le service export** dans `Services/NouveauTypeXmlExportService.cs`
+5. **Créer le mapper** dans `Mappers/NouveauTypeMapper.cs`
+6. **Modifier Program.cs** pour ajouter les nouvelles méthodes d'export
 
-```bash
-#!/bin/bash
-# Script de surveillance pour Linux/WSL
+### **2. Modifier les règles de transformation UTF-8**
 
-LOG_FILE="/path/to/logs/translator.log"
-ERROR_COUNT=$(grep -c "ERROR" "$LOG_FILE" | tail -100)
-
-if [ $ERROR_COUNT -gt 0 ]; then
-    echo "⚠️ $ERROR_COUNT erreurs détectées dans les logs"
-    # Envoyer alerte email/notification
-fi
-```
-
-## 🔄 Développement et Extension
-
-### **Ajouter un nouveau mode d'export**
-
-**1. Dans Program.cs :**
+**Fichier :** `Services/Utf8TextProcessor.cs`
 
 ```csharp
-// Ajouter dans IsTestMode()
-if (arg == "custom") {
-    return true;
-}
-
-// Ajouter la méthode
-private static async Task ExportCustomMode() {
-    // Logique spécifique
-}
+// Dans la méthode InitializeCharacterMapping()
+TryAdd(mapping, "nouveau_caractère", "remplacement");
 ```
 
-### **Modifier les règles de transformation**
+### **3. Ajouter des champs WINDEV**
 
-**Fichier :** `Mappers/ArticleMapper.cs`
-
-```csharp
-// Modifier la méthode TransformCategory()
-private string TransformCategory(string? category)
-{
-    // Ajouter de nouvelles règles de transformation
-}
-```
-
-### **Ajouter des champs WINDEV**
-
-**1. Dans Models/WinDevArticle.cs :**
+**1. Dans le modèle WINDEV :**
 
 ```csharp
 [XmlElement("NOUVEAU_CHAMP")]
 public string NouveauChamp { get; set; } = "";
 ```
 
-**2. Dans Mappers/ArticleMapper.cs :**
+**2. Dans le mapper :**
 
 ```csharp
-ArtNouveauChamp = dynamics.NouvelleProprieté ?? "valeur_par_defaut",
+NouveauChamp = _textProcessor.ProcessText(dynamics.NouvelleProprieteDynamics),
 ```
 
-## 📋 Codes de Retour
+### **4. Modifier les règles métier**
 
-| **Code** | **Signification** |
-|----------|------------------|
-| `0` | Export réussi |
-| `1` | Erreur générale |
-| `2` | Erreur fatale |
+**Fichier :** `Mappers/[Type]Mapper.cs`
 
-## 📞 Support Technique
+```csharp
+// Exemple : Ajouter une nouvelle règle d'exclusion
+public bool ShouldExcludeElement(Element element)
+{
+    // Votre logique ici
+    return false;
+}
+```
 
-### **Fichiers de diagnostic :**
+## 🚨 Dépannage
 
-- **Logs applicatifs :** `logs/translator.log`
-- **Logs d'export :** Table `xml_export_logs`
-- **Configuration :** `appsettings.json`
+### **Erreurs courantes**
 
-### **Commandes de diagnostic :**
+#### **❌ Erreur de connexion SQL**
 
 ```bash
-# Test rapide
+# Vérifier le service
+services.msc → SQL Server
+
+# Tester la connexion
+sqlcmd -S localhost\SQLEXPRESS -U utilisateur -P password
+```
+
+#### **❌ Aucun élément à exporter**
+
+- Normal si tous déjà exportés
+- Utiliser mode test : `DynamicsToXmlTranslator.exe test`
+- Vérifier `JSON_TRTP` dans la base
+
+#### **❌ Fichiers non générés**
+
+- Vérifier permissions dossier `exports/`
+- Consulter `logs/translator.log`
+- Vérifier espace disque
+
+#### **❌ Caractères bizarres dans XML**
+
+- Le traitement UTF-8 est automatique
+- Vérifier que l'entrée SQL est bien en UTF-8
+- Consulter les logs pour les transformations appliquées
+
+### **Codes de retour**
+
+| **Code** | **Signification** |
+| -------- | ----------------- |
+| `0`      | Export réussi     |
+| `1`      | Erreur générale   |
+| `2`      | Erreur fatale     |
+
+## 🔄 Automatisation
+
+### **1. Tâche planifiée Windows**
+
+```bash
+schtasks /create /tn "Export Dynamics" /tr "C:\Path\To\DynamicsToXmlTranslator.exe" /sc hourly
+```
+
+### **2. Script PowerShell**
+
+```powershell
+$ExePath = "C:\Path\To\DynamicsToXmlTranslator.exe"
+$Process = Start-Process -FilePath $ExePath -Wait -PassThru -NoNewWindow
+
+if ($Process.ExitCode -eq 0) {
+    Write-Host "✅ Export réussi"
+    # Traitement des fichiers...
+} else {
+    Write-Host "❌ Erreur export"
+    # Gestion erreurs...
+}
+```
+
+### **3. Intégration application**
+
+```csharp
+// Exemple C# pour appeler le traducteur
+var startInfo = new ProcessStartInfo
+{
+    FileName = @"C:\Path\To\DynamicsToXmlTranslator.exe",
+    Arguments = "articles", // articles, po, ro, to, ps
+    UseShellExecute = false,
+    RedirectStandardOutput = true
+};
+
+using var process = Process.Start(startInfo);
+process.WaitForExit();
+int exitCode = process.ExitCode; // 0 = succès
+```
+
+## 📝 Changelog
+
+### **Version 3.0** (Actuelle)
+
+- ✅ Support 5 types d'entités (Articles, PO, RO, TO, PS)
+- ✅ Traitement UTF-8 automatique complet
+- ✅ Exclusion automatique Articles ART_STAT=3
+- ✅ Export Packing Slips en 2 fichiers TXT SPEED
+- ✅ Règles métier intégrées (RG1-RG21)
+- ✅ Mode Test et Production
+- ✅ Export par lots automatique
+- ✅ .NET 8.0 et SQL Server
+
+### **Version 2.0**
+
+- ✅ Migration SQL Server
+- ✅ Support Purchase/Return/Transfer Orders
+- ✅ Traitement UTF-8 basique
+
+### **Version 1.0**
+
+- ✅ Export Articles uniquement
+- ✅ MySQL/MariaDB
+
+## 🆘 Support
+
+### **Diagnostics**
+
+```bash
+# Test complet
 DynamicsToXmlTranslator.exe test
 
-# Vérifier les logs
+# Vérifier logs
 tail -f logs/translator.log
 
-# Statistiques SQL
-SELECT 
-    JSON_STAT as statut,
-    JSON_TRTP as traitement,
-    COUNT(*) as nb_articles
-FROM dbo.JSON_IN 
-GROUP BY JSON_STAT, JSON_TRTP;
+# Statistiques base
+SELECT JSON_FROM, COUNT(*) FROM JSON_IN GROUP BY JSON_FROM;
 ```
+
+### **Fichiers de diagnostic**
+
+- **Configuration :** `appsettings.json`
+- **Logs :** `logs/translator.log`
+- **Exports :** Dossier `exports/`
+- **Base :** Tables `*_export_logs`
 
 ---
 
-**Version :** 2.0 - Mode automatisé avec SQL Server  
-**Dernière mise à jour :** 2025  
-**Compatibilité :** .NET 8.0, SQL Server 2016+
+**🔧 Version :** 3.0 - Multi-entités avec UTF-8 et règles métier  
+**📅 Dernière MAJ :** 2025  
+**⚙️ Compatibilité :** .NET 8.0, SQL Server 2016+, WINDEV/SPEED
