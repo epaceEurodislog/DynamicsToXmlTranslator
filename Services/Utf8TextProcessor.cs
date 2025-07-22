@@ -34,10 +34,22 @@ namespace DynamicsToXmlTranslator.Services
 
             try
             {
+                // ✅ ÉTAPE 1 : Normalisation Unicode AVANT tout traitement
                 string normalized = input.Normalize(NormalizationForm.FormKD);
-                string processed = ReplaceSpecialCharacters(normalized);
+
+                // ✅ ÉTAPE 2 : Nettoyage des entités HTML/XML AVANT les remplacements
+                string cleaned = UnescapeHtmlEntities(normalized);
+
+                // ✅ ÉTAPE 3 : Remplacement des caractères spéciaux
+                string processed = ReplaceSpecialCharacters(cleaned);
+
+                // ✅ ÉTAPE 4 : Suppression caractères de contrôle
                 processed = RemoveControlCharacters(processed);
+
+                // ✅ ÉTAPE 5 : Suppression accents restants
                 processed = RemoveAccents(processed);
+
+                // ✅ ÉTAPE 6 : Échappement XML (EN DERNIER pour éviter doubles échappements)
                 processed = EscapeXmlCharacters(processed);
 
                 if (maxLength.HasValue && processed.Length > maxLength.Value)
@@ -60,6 +72,23 @@ namespace DynamicsToXmlTranslator.Services
                 _logger.LogError(ex, $"Erreur lors du traitement du texte: '{input}'");
                 return CleanBasicText(input, maxLength);
             }
+        }
+
+        /// <summary>
+        /// ✅ MODIFIÉ : Supprime complètement les entités HTML/XML communes (remplacées par du vide)
+        /// </summary>
+        private string UnescapeHtmlEntities(string input)
+        {
+            return input
+                .Replace("&amp;", "")        // Entité & → supprimé
+                .Replace("&apos;", "")       // Entité apostrophe → supprimé
+                .Replace("&quot;", "")       // Entité guillemets → supprimé
+                .Replace("&lt;", "")         // Entité < → supprimé
+                .Replace("&gt;", "")         // Entité > → supprimé
+                .Replace("&#39;", "")        // Code numérique apostrophe → supprimé
+                .Replace("&#x27;", "")       // Code hexadécimal apostrophe → supprimé
+                .Replace("&#34;", "")        // Code numérique guillemets → supprimé
+                .Replace("&#x22;", "");      // Code hexadécimal guillemets → supprimé
         }
 
         /// <summary>
@@ -91,15 +120,14 @@ namespace DynamicsToXmlTranslator.Services
         }
 
         /// <summary>
-        /// ✅ MÉTHODE BULLETPROOF : Construction par étapes pour éviter TOUT doublon
+        /// ✅ MODIFIÉ : Dictionnaire de caractères spéciaux SANS les entités HTML
         /// </summary>
         private Dictionary<string, string> InitializeCharacterMapping()
         {
             var mapping = new Dictionary<string, string>();
 
-            // ========== ÉTAPE 1: RÈGLE SPÉCIALE & ==========
+            // ========== ÉTAPE 1: RÈGLE SPÉCIALE & (caractère direct, pas l'entité) ==========
             TryAdd(mapping, "&", "et");
-            TryAdd(mapping, "&amp;", "et");
             TryAdd(mapping, " & ", " et ");
 
             // ========== ÉTAPE 2: VOYELLES MINUSCULES ==========
@@ -234,15 +262,44 @@ namespace DynamicsToXmlTranslator.Services
         }
 
         /// <summary>
-        /// Échappe les caractères spéciaux XML (SAUF & qui est déjà traité comme "et")
+        /// ✅ MODIFIÉ : Échappe les caractères spéciaux XML (SANS traiter & qui est déjà géré)
         /// </summary>
         private string EscapeXmlCharacters(string input)
         {
+            // Ne pas échapper & car il est déjà traité comme "et"
             return input
                 .Replace("<", "&lt;")
                 .Replace(">", "&gt;")
                 .Replace("\"", "&quot;")
-                .Replace("'", "&apos;");
+                .Replace("'", "&apos;");  // Apostrophe devient &apos; en dernier
+        }
+
+        public void LogCorrectionExamples(ILogger logger)
+        {
+            var examples = new Dictionary<string, string>
+    {
+        {"Adrech de la Colle d&apos;Ausse", "Adrech de la Colle dAusse"},
+        {"L&apos;Oréal & Co", "LOreal et Co"},
+        {"Beauté &amp; Santé", "Beaute  Sante"},
+        {"Crème &quot;premium&quot;", "Creme premium"},
+        {"Société &amp; Associés", "Societe  Associes"},
+        {"L&apos;Occitane en Provence", "LOccitane en Provence"},
+        {"Prix &lt;100&gt; euros", "Prix 100 euros"}
+    };
+
+            logger.LogInformation("=== EXEMPLES DE CORRECTIONS UTF-8 (ENTITÉS SUPPRIMÉES) ===");
+            foreach (var example in examples)
+            {
+                var processed = ProcessText(example.Key);
+                var status = processed == example.Value ? "✅" : "❌";
+
+                logger.LogInformation($"{status} '{example.Key}' → '{processed}'");
+                if (processed != example.Value)
+                {
+                    logger.LogWarning($"   Attendu: '{example.Value}'");
+                }
+            }
+            logger.LogInformation("=== FIN EXEMPLES CORRECTIONS ===");
         }
 
         /// <summary>
