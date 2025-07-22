@@ -20,13 +20,14 @@ namespace DynamicsToXmlTranslator.Services
         private readonly PackingSlipDatabaseService _packingSlipDatabaseService;
 
         // En-têtes pour le fichier OPE (CDEN_LTRF)
+        // En-têtes pour le fichier OPE (CDEN_LTRF) - ✅ MODIFIÉ : STATUT ajouté à la fin
         private readonly string[] _headersOPE = new string[]
         {
             "ACT_CODE", "OPE_DACO", "OPE_REDO", "TIE_CODE", "OPE_RTIE", "TIE_NOM", "OPE_ADR1", "OPE_ADR2", "OPE_ADR3", "OPE_ADR4",
             "OPE_ADVL", "OPE_ADCP", "OPE_CPAY", "OPE_COBP", "OPE_COBL", "OPE_DALI", "OPE_CTRA", "OPE_ALPHA16", "OPE_ALPHA17", "OPE_ALPHA18",
             "OPE_ALPHA19", "OPE_ALPHA20", "OPE_ALPHA21", "OPE_ALPHA22", "OPE_ALPHA23", "OPE_ALPHA24", "OPE_ALPHA25", "OPE_TEL", "OPE_FAX", "OPE_IMEL",
             "OPE_ALPHA1", "OPE_ALPHA5", "OPE_ALPHA6", "OPE_ALPHA9", "OPE_ALPHA15", "OPE_DATE15", "OPE_ALPHA31", "OPE_ALPHA34", "OPE_ALPHA35", "OPE_ALPHA36",
-            "OPE_ALPHA37", "OPE_ALPHA38", "OPE_TOP17"
+            "OPE_ALPHA37", "OPE_ALPHA38", "OPE_TOP17", "STATUT"
         };
 
         // En-têtes pour le fichier OPL (CDLG_LTRF) - selon votre exemple
@@ -194,7 +195,7 @@ namespace DynamicsToXmlTranslator.Services
 
         /// <summary>
         /// Formate une ligne d'en-tête selon l'ordre exact des colonnes OPE
-        /// ✅ MODIFIÉ : Gestion du format spécial pour OPE_ALPHA31
+        /// ✅ MODIFIÉ : Gestion du format spécial pour OPE_ALPHA31 + nouveau champ STATUT
         /// </summary>
         private string FormatHeaderLine(SpeedPackingSlipHeader header)
         {
@@ -243,7 +244,8 @@ namespace DynamicsToXmlTranslator.Services
         header.OPE_ALPHA36 ?? "",                 // OPE_ALPHA36
         header.OPE_ALPHA37 ?? "",                 // OPE_ALPHA37
         header.OPE_ALPHA38 ?? "",                 // OPE_ALPHA38
-        header.OPE_TOP17 ?? "0"                   // OPE_TOP17
+        header.OPE_TOP17 ?? "0",                  // OPE_TOP17
+        header.STATUT ?? ""                       // ✅ NOUVEAU : STATUT à la fin
             };
 
             // Nettoyer les valeurs pour éviter les problèmes avec les séparateurs

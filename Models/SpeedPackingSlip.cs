@@ -78,6 +78,8 @@ namespace DynamicsToXmlTranslator.Models
         public string OPE_ALPHA42 { get; set; } = "";                     // Stocké dans OPE_ALPHA31
         public string OPE_ALPHA43 { get; set; } = "";                     // Stocké dans OPE_ALPHA31
 
+        public string STATUT { get; set; } = "";  // Nouveau champ statut (vide)
+
         /// <summary>
         /// ✅ CORRIGÉ : Construit le format spécial pour OPE_ALPHA31 avec TOUS les champs ALPHA > 38 selon mapping client
         /// Format: donneralpha31[alpha40:donneealpha40_alpha41:donneealpha41_alpha45:donneealpha45_alpha46:donneealpha46_alpha47:donneealpha47_alpha48:donneealpha48]
@@ -145,6 +147,7 @@ namespace DynamicsToXmlTranslator.Models
             public string OPL_ALPHA1 { get; set; } = "";                      // Champ libre 1 ✅ CORRECT
             public string OPL_ALPHA2 { get; set; } = "";                      // Champ libre 2 ✅ CORRECT
             public string OPL_ALPHA3 { get; set; } = "";                      // Champ libre 3 ✅ CORRECT
+
         }
 
         /// <summary>

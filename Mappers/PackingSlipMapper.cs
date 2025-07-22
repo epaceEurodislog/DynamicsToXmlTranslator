@@ -89,7 +89,7 @@ namespace DynamicsToXmlTranslator.Mappers
 
         /// <summary>
         /// Crée l'en-tête de commande selon le format OPE
-        /// ✅ MODIFIÉ : Gestion des champs OPE_ALPHA > 38
+        /// ✅ MODIFIÉ : Gestion des champs OPE_ALPHA > 38 + nouveau champ STATUT
         /// </summary>
         private SpeedPackingSlipHeader CreateHeader(DynamicsPackingSlip dynamics)
         {
@@ -146,13 +146,6 @@ namespace DynamicsToXmlTranslator.Mappers
                 OPE_TOP25 = dynamics.BRPreparationEnum,                              // Délai Préparation (TINYINT)
                 OPE_TOP28 = dynamics.BRShippingDocumentEnum.ToString(),              // Documentation Expédition
 
-                // ✅ CORRECTIONS SELON MAPPING CLIENT :
-                // CarrierServiceCode va dans ALPHA40@ALPHA41 pas ALPHA16@ALPHA18
-                // (voir ProcessCarrierService modifié ci-dessous)
-
-                // ========== ANCIENS CHAMPS À SUPPRIMER ==========
-                // OPE_ALPHA39, OPE_ALPHA42, OPE_ALPHA43 ne sont pas dans le mapping client
-
                 // ========== CHAMPS VIDES ==========
                 OPE_ADR4 = "",
                 OPE_FAX = "",
@@ -171,20 +164,68 @@ namespace DynamicsToXmlTranslator.Mappers
                 OPE_ALPHA35 = "",
                 OPE_ALPHA36 = "",
                 OPE_ALPHA37 = "",
-                OPE_ALPHA38 = ""
+                OPE_ALPHA38 = "",
+
+                // ========== NOUVEAU CHAMP STATUT À LA FIN ==========
+                STATUT = ""  // Champ statut vide selon spécifications
             };
 
             // ========== TRAITEMENT SPÉCIAUX ==========
-            ProcessAddress(dynamics.Street, header);
-            ProcessCarrierServiceCorrected(dynamics.CarrierServiceCode, header); // ✅ MODIFIÉ
+            ProcessAddressWithUtf8(dynamics.Street, header);  // ✅ MODIFIÉ avec UTF-8
+            ProcessCarrierServiceCorrected(dynamics.CarrierServiceCode, header);
 
             return header;
+        }
+
+        /// <summary>
+        /// ✅ MODIFIÉ : Traitement de l'adresse avec UTF-8 pour l'en-tête
+        /// </summary>
+        private void ProcessAddressWithUtf8(string? street, SpeedPackingSlipHeader header)
+        {
+            if (string.IsNullOrEmpty(street))
+            {
+                header.OPE_ADR1 = "";
+                header.OPE_ADR2 = "";
+                header.OPE_ADR3 = "";
+                return;
+            }
+
+            // ✅ NOUVEAU : Application du traitement UTF-8 sur l'adresse
+            string cleanStreet = _textProcessor.ProcessName(street, 150); // UTF-8 + max 150 pour 3 champs
+
+            // Répartir sur 3 champs de 50 caractères max
+            if (cleanStreet.Length <= 50)
+            {
+                header.OPE_ADR1 = cleanStreet;
+                header.OPE_ADR2 = "";
+                header.OPE_ADR3 = "";
+            }
+            else if (cleanStreet.Length <= 100)
+            {
+                header.OPE_ADR1 = cleanStreet.Substring(0, 50);
+                header.OPE_ADR2 = cleanStreet.Substring(50);
+                header.OPE_ADR3 = "";
+            }
+            else
+            {
+                header.OPE_ADR1 = cleanStreet.Substring(0, 50);
+                header.OPE_ADR2 = cleanStreet.Substring(50, Math.Min(50, cleanStreet.Length - 50));
+                if (cleanStreet.Length > 100)
+                {
+                    header.OPE_ADR3 = cleanStreet.Substring(100, Math.Min(50, cleanStreet.Length - 100));
+                }
+                else
+                {
+                    header.OPE_ADR3 = "";
+                }
+            }
         }
 
 
 
         /// <summary>
         /// Crée une ligne de commande selon le format OPL
+        /// ✅ MODIFIÉ : Préfixe "BR" ajouté aux codes articles
         /// </summary>
         private SpeedPackingSlipLine CreateLine(DynamicsPackingSlip dynamics, int lineNumber)
         {
@@ -194,7 +235,7 @@ namespace DynamicsToXmlTranslator.Mappers
                 ACT_CODE = "COSMETIQUE",
                 OPL_RCDO = _textProcessor.ProcessCode(dynamics.transRefId),   // CLÉ DE LIAISON ✅ CORRECT
                 OPL_RLDO = lineNumber.ToString(),                             // Numéro ligne ✅ CORRECT
-                ART_CODE = _textProcessor.ProcessCode(dynamics.itemId),       // Référence article ✅ CORRECT
+                ART_CODE = "BR" + _textProcessor.ProcessCode(dynamics.itemId), // ✅ MODIFIÉ : Préfixe "BR" ajouté
                 OPL_QTAP = dynamics.qty,                                     // Quantité ✅ CORRECT
 
                 // ✅ CORRIGÉ : Mapping selon client
