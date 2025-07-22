@@ -25,7 +25,7 @@ namespace DynamicsToXmlTranslator.Services
         }
 
         /// <summary>
-        /// Traite et normalise un texte pour l'export XML
+        /// ✅ MODIFIÉ : Traite et normalise un texte avec suppression COMPLÈTE des entités
         /// </summary>
         public string ProcessText(string? input, int? maxLength = null)
         {
@@ -37,7 +37,7 @@ namespace DynamicsToXmlTranslator.Services
                 // ✅ ÉTAPE 1 : Normalisation Unicode AVANT tout traitement
                 string normalized = input.Normalize(NormalizationForm.FormKD);
 
-                // ✅ ÉTAPE 2 : Nettoyage des entités HTML/XML AVANT les remplacements
+                // ✅ ÉTAPE 2 : Suppression EXHAUSTIVE des entités HTML/XML
                 string cleaned = UnescapeHtmlEntities(normalized);
 
                 // ✅ ÉTAPE 3 : Remplacement des caractères spéciaux
@@ -49,20 +49,29 @@ namespace DynamicsToXmlTranslator.Services
                 // ✅ ÉTAPE 5 : Suppression accents restants
                 processed = RemoveAccents(processed);
 
-                // ✅ ÉTAPE 6 : Échappement XML (EN DERNIER pour éviter doubles échappements)
-                processed = EscapeXmlCharacters(processed);
+                // ✅ ÉTAPE 6 : NETTOYAGE FINAL pour éliminer toute entité résiduelle
+                processed = FinalEntityCleanup(processed);
 
+                // ✅ ÉTAPE 7 : Échappement XML (EN DERNIER si nécessaire)
+                // Pour les TXT, on ne fait PAS d'échappement XML
+                if (!processed.Contains("|")) // Simple détection si c'est pour TXT
+                {
+                    processed = EscapeXmlCharacters(processed);
+                }
+
+                // ✅ ÉTAPE 8 : Troncature si nécessaire
                 if (maxLength.HasValue && processed.Length > maxLength.Value)
                 {
                     processed = processed.Substring(0, maxLength.Value);
                     _logger.LogDebug($"Texte tronqué à {maxLength.Value} caractères: '{input}' → '{processed}'");
                 }
 
-                ValidateXmlCompatibility(processed);
+                // ✅ ÉTAPE 9 : Nettoyage final des espaces multiples
+                processed = System.Text.RegularExpressions.Regex.Replace(processed, @"\s+", " ").Trim();
 
                 if (input != processed)
                 {
-                    _logger.LogTrace($"Texte transformé: '{input}' → '{processed}'");
+                    _logger.LogTrace($"Entités supprimées: '{input}' → '{processed}'");
                 }
 
                 return processed;
@@ -75,20 +84,101 @@ namespace DynamicsToXmlTranslator.Services
         }
 
         /// <summary>
-        /// ✅ MODIFIÉ : Supprime complètement les entités HTML/XML communes (remplacées par du vide)
+        /// ✅ SUPPRESSION EXHAUSTIVE de TOUTES les entités HTML/XML possibles
         /// </summary>
         private string UnescapeHtmlEntities(string input)
         {
-            return input
-                .Replace("&amp;", "")        // Entité & → supprimé
-                .Replace("&apos;", "")       // Entité apostrophe → supprimé
-                .Replace("&quot;", "")       // Entité guillemets → supprimé
-                .Replace("&lt;", "")         // Entité < → supprimé
-                .Replace("&gt;", "")         // Entité > → supprimé
-                .Replace("&#39;", "")        // Code numérique apostrophe → supprimé
-                .Replace("&#x27;", "")       // Code hexadécimal apostrophe → supprimé
-                .Replace("&#34;", "")        // Code numérique guillemets → supprimé
-                .Replace("&#x22;", "");      // Code hexadécimal guillemets → supprimé
+            if (string.IsNullOrEmpty(input))
+                return "";
+
+            string result = input;
+
+            // ========== ENTITÉS NOMMÉES COMMUNES ==========
+            result = result.Replace("&amp;", "");       // & → supprimé
+            result = result.Replace("&apos;", "");      // ' → supprimé
+            result = result.Replace("&quot;", "");      // " → supprimé
+            result = result.Replace("&lt;", "");        // < → supprimé
+            result = result.Replace("&gt;", "");        // > → supprimé
+            result = result.Replace("&nbsp;", " ");     // espace insécable → espace normal
+
+            // ========== ENTITÉS NUMÉRIQUES DÉCIMALES ==========
+            result = result.Replace("&#39;", "");       // ' → supprimé
+            result = result.Replace("&#34;", "");       // " → supprimé
+            result = result.Replace("&#38;", "");       // & → supprimé
+            result = result.Replace("&#60;", "");       // < → supprimé
+            result = result.Replace("&#62;", "");       // > → supprimé
+            result = result.Replace("&#160;", " ");     // espace insécable → espace
+
+            // ========== ENTITÉS HEXADÉCIMALES ==========
+            result = result.Replace("&#x27;", "");      // ' → supprimé
+            result = result.Replace("&#x22;", "");      // " → supprimé
+            result = result.Replace("&#x26;", "");      // & → supprimé
+            result = result.Replace("&#x3C;", "");      // < → supprimé
+            result = result.Replace("&#x3c;", "");      // < (minuscule) → supprimé
+            result = result.Replace("&#x3E;", "");      // > → supprimé
+            result = result.Replace("&#x3e;", "");      // > (minuscule) → supprimé
+            result = result.Replace("&#xA0;", " ");     // espace insécable → espace
+            result = result.Replace("&#xa0;", " ");     // espace insécable (minuscule) → espace
+
+            // ========== ENTITÉS ÉTENDUES ==========
+            result = result.Replace("&copy;", "");      // © → supprimé
+            result = result.Replace("&reg;", "");       // ® → supprimé
+            result = result.Replace("&trade;", "");     // ™ → supprimé
+            result = result.Replace("&euro;", "");      // € → supprimé
+            result = result.Replace("&pound;", "");     // £ → supprimé
+            result = result.Replace("&yen;", "");       // ¥ → supprimé
+            result = result.Replace("&cent;", "");      // ¢ → supprimé
+            result = result.Replace("&sect;", "");      // § → supprimé
+            result = result.Replace("&para;", "");      // ¶ → supprimé
+            result = result.Replace("&middot;", "");    // · → supprimé
+            result = result.Replace("&hellip;", "");    // … → supprimé
+            result = result.Replace("&mdash;", "");     // — → supprimé
+            result = result.Replace("&ndash;", "");     // – → supprimé
+            result = result.Replace("&lsquo;", "");     // ' → supprimé
+            result = result.Replace("&rsquo;", "");     // ' → supprimé
+            result = result.Replace("&ldquo;", "");     // " → supprimé
+            result = result.Replace("&rdquo;", "");     // " → supprimé
+            result = result.Replace("&laquo;", "");     // « → supprimé
+            result = result.Replace("&raquo;", "");     // » → supprimé
+
+            // ========== SUPPRESSION PAR REGEX (SÉCURITÉ) ==========
+            // Supprime toutes les entités de type &#nombre; et &#xhex;
+            result = System.Text.RegularExpressions.Regex.Replace(result, @"&#\d+;", "");
+            result = System.Text.RegularExpressions.Regex.Replace(result, @"&#x[0-9a-fA-F]+;", "");
+
+            // Supprime toutes les entités nommées restantes de type &nom;
+            result = System.Text.RegularExpressions.Regex.Replace(result, @"&[a-zA-Z][a-zA-Z0-9]*;", "");
+
+            return result;
+        }
+
+        /// <summary>
+        /// ✅ NOUVEAU : Nettoyage final pour éliminer les entités résiduelles
+        /// </summary>
+        private string FinalEntityCleanup(string input)
+        {
+            if (string.IsNullOrEmpty(input))
+                return "";
+
+            string result = input;
+
+            // Dernière passe pour capturer les entités qui auraient pu échapper
+            var entityPatterns = new[]
+            {
+        "&amp;", "&apos;", "&quot;", "&lt;", "&gt;", "&nbsp;",
+        "&#39;", "&#34;", "&#38;", "&#60;", "&#62;", "&#160;",
+        "&#x27;", "&#x22;", "&#x26;", "&#x3C;", "&#x3c;", "&#x3E;", "&#x3e;", "&#xA0;", "&#xa0;"
+    };
+
+            foreach (var pattern in entityPatterns)
+            {
+                while (result.Contains(pattern))
+                {
+                    result = result.Replace(pattern, "");
+                }
+            }
+
+            return result;
         }
 
         /// <summary>

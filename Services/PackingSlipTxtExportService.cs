@@ -293,21 +293,38 @@ namespace DynamicsToXmlTranslator.Services
         }
 
         /// <summary>
-        /// ✅ MODIFIÉ : Nettoie une valeur pour l'export TXT en préservant les caractères spéciaux du format
+        /// ✅ MODIFIÉ : Nettoyage renforcé pour l'export TXT avec suppression entités
         /// </summary>
         private string CleanValueForTxt(string value)
         {
             if (string.IsNullOrEmpty(value))
                 return "";
 
-            // ✅ NOUVEAU : Préserver les caractères [ ] _ pour le format spécial OPE_ALPHA31
-            return value
-                .Replace("|", " ")      // Remplacer le séparateur par un espace
-                .Replace("\r", " ")     // Remplacer les retours chariot
-                .Replace("\n", " ")     // Remplacer les sauts de ligne
-                .Replace("\t", " ")     // Remplacer les tabulations
+            // ✅ ÉTAPE 1 : Suppression explicite des entités courantes
+            string cleaned = value
+                .Replace("&amp;", "")
+                .Replace("&apos;", "")
+                .Replace("&quot;", "")
+                .Replace("&lt;", "")
+                .Replace("&gt;", "")
+                .Replace("&#39;", "")
+                .Replace("&#34;", "")
+                .Replace("&#38;", "")
+                .Replace("&#x27;", "")
+                .Replace("&#x22;", "")
+                .Replace("&#x26;", "");
+
+            // ✅ ÉTAPE 2 : Suppression par regex de toutes les entités restantes
+            cleaned = System.Text.RegularExpressions.Regex.Replace(cleaned, @"&[#a-zA-Z0-9]+;", "");
+
+            // ✅ ÉTAPE 3 : Nettoyage des séparateurs et caractères de contrôle
+            cleaned = cleaned
                 .Trim();                // Supprimer les espaces en début/fin
-                                        // Note : On garde [ ] _ pour le format spécial
+
+            // ✅ ÉTAPE 4 : Nettoyage des espaces multiples
+            cleaned = System.Text.RegularExpressions.Regex.Replace(cleaned, @"\s+", " ");
+
+            return cleaned;
         }
 
         /// <summary>

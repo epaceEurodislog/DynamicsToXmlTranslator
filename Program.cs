@@ -58,6 +58,7 @@ namespace DynamicsToXmlTranslator
                 SetupConfiguration();
                 SetupLogging();
                 SetupServices();
+                TestEntityRemoval();
 
                 // ✅ NOUVEAU : Log des informations UTF-8 + exclusion
                 _logger.LogInformation("✅ Service de traitement UTF-8 initialisé");
@@ -1240,6 +1241,48 @@ namespace DynamicsToXmlTranslator
                     );
                 }
             }
+        }
+
+        /// <summary>
+        /// ✅ NOUVEAU : Test spécifique de suppression des entités
+        /// </summary>
+        private static void TestEntityRemoval()
+        {
+            Console.WriteLine("=== TEST SUPPRESSION ENTITÉS ===");
+
+            var testCases = new Dictionary<string, string>
+    {
+        {"L&apos;Oréal & Co", "LOreal  Co"},
+        {"Société &amp; Associés", "Societe  Associes"},
+        {"Produit &quot;Premium&quot;", "Produit Premium"},
+        {"Prix &lt;100&gt; euros", "Prix 100 euros"},
+        {"Beauté &amp; Santé", "Beaute  Sante"},
+        {"L&apos;Occitane &amp; Cie", "LOccitane  Cie"},
+        {"Code &#39;spécial&#39;", "Code special"},
+        {"Marque &#x26; Distribution", "Marque  Distribution"}
+    };
+
+            int passed = 0;
+            foreach (var test in testCases)
+            {
+                var processed = _textProcessor.ProcessText(test.Key);
+                var expectedWithoutSpaces = test.Value.Replace("  ", " "); // Normaliser espaces
+                var success = processed.Replace("  ", " ") == expectedWithoutSpaces;
+
+                var status = success ? "✅" : "❌";
+                Console.WriteLine($"{status} '{test.Key}' → '{processed}'");
+
+                if (!success)
+                {
+                    Console.WriteLine($"   Attendu: '{expectedWithoutSpaces}'");
+                }
+                else
+                {
+                    passed++;
+                }
+            }
+
+            Console.WriteLine($"=== RÉSULTAT: {passed}/{testCases.Count} tests passés ===\n");
         }
 
         /// <summary>
