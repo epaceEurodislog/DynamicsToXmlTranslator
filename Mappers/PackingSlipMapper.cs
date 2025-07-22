@@ -88,97 +88,16 @@ namespace DynamicsToXmlTranslator.Mappers
         }
 
         /// <summary>
-        /// Crée l'en-tête de commande selon le format OPE
-        /// ✅ MODIFIÉ : Gestion des champs OPE_ALPHA > 38 + nouveau champ STATUT
+        /// ✅ MODIFIÉ : Utiliser la nouvelle méthode avec UTF-8 complet
         /// </summary>
         private SpeedPackingSlipHeader CreateHeader(DynamicsPackingSlip dynamics)
         {
-            var header = new SpeedPackingSlipHeader
-            {
-                // ========== VALEURS FIXES ==========
-                ACT_CODE = "COSMETIQUE",
-                OPE_TOP17 = "0",
-
-                // ========== DATES ==========
-                OPE_DACO = FormatDateForTxt(DateTime.Now),                    // Date du jour
-                OPE_DALI = FormatDateForTxt(dynamics.DlvDate),               // Date livraison souhaitée ✅ CORRECT
-
-                // ========== RÉFÉRENCES ==========
-                OPE_REDO = _textProcessor.ProcessCode(dynamics.transRefId),   // CLÉ DE LIAISON ✅ CORRECT
-                TIE_CODE = _textProcessor.ProcessCode(dynamics.customer),    // Code Tiers destinataire ✅ CORRECT
-                OPE_RTIE = ApplyReferenceRule(dynamics),                     // RG1 et RG2 ✅ CORRECT
-                OPE_ALPHA17 = _textProcessor.ProcessCode(dynamics.pickingRouteID), // Numéro Document D365 ✅ CORRECT
-
-                // ========== INFORMATIONS CLIENT ==========
-                TIE_NOM = _textProcessor.ProcessName(dynamics.DeliveryName, 50),    // Nom Tiers ✅ CORRECT
-                OPE_ADVL = _textProcessor.ProcessName(dynamics.City, 50),           // Ville ✅ CORRECT
-                OPE_ADCP = _textProcessor.ProcessCode(dynamics.ZipCode),            // Code postal ✅ CORRECT
-                OPE_CPAY = _textProcessor.ProcessCode(dynamics.ISOcode),            // Pays ISO ✅ CORRECT
-                OPE_TEL = _textProcessor.ProcessCode(dynamics.Phone),               // Téléphone ✅ CORRECT
-                OPE_IMEL = _textProcessor.ProcessName(dynamics.Email, 100),         // Email ✅ CORRECT
-
-                // ✅ NOUVEAU : Champ Contact manquant
-                OPE_CONT = _textProcessor.ProcessName(dynamics.Contact, 50),        // Contact
-
-                // ========== TRANSPORT ==========
-                OPE_CTRA = ApplyTransportCodeRule(dynamics.CarrierCode),     // RG3 ✅ CORRECT
-
-                // ========== COMMENTAIRES ==========
-                OPE_COBP = _textProcessor.ProcessName(dynamics.CommentPreparation, 255), // Commentaire Préparation ✅ CORRECT
-
-                // ✅ CORRIGÉ : CommentExpedition va dans OPE_COME pas OPE_COBL
-                OPE_COME = _textProcessor.ProcessName(dynamics.CommentExpedition, 255),  // Commentaire Expedition
-                OPE_COBL = "", // Vide selon mapping
-
-                // ========== AUTRES CHAMPS SELON MAPPING CLIENT ==========
-                OPE_ALPHA21 = _textProcessor.ProcessCode(dynamics.SalesOriginId),   // Canal de Ventes ✅ CORRECT
-                OPE_ALPHA6 = _textProcessor.ProcessCode(dynamics.SegmentId),        // Segment ✅ CORRECT
-                OPE_ALPHA31 = dynamics.SellableDays.ToString(),                     // Famille Classification (BASE) ✅ CORRECT
-
-                // ✅ NOUVEAUX CHAMPS SELON MAPPING CLIENT :
-                OPE_ALPHA45 = _textProcessor.ProcessCode(dynamics.CardTypeRemer),     // Type Carte Remerciement
-                OPE_ALPHA46 = _textProcessor.ProcessCode(dynamics.BRTransportModeCode), // Type Transport Si Dangereux
-                OPE_ALPHA47 = _textProcessor.ProcessCode(dynamics.BoxTypeBtc),        // Type Boite BtC
-                OPE_ALPHA48 = _textProcessor.ProcessCode(dynamics.DlvTermId),         // Incoterm
-                OPE_GRP = _textProcessor.ProcessCode(dynamics.BROrderGrouping),       // Code Regroupement
-                OPE_MPCO = _textProcessor.ProcessCode(dynamics.BRPackingCode),        // Type Conditionnement
-                OPE_UNICODE11 = _textProcessor.ProcessName(dynamics.MessagePerso, 255), // Message Personnalisé
-                OPE_TOP25 = dynamics.BRPreparationEnum,                              // Délai Préparation (TINYINT)
-                OPE_TOP28 = dynamics.BRShippingDocumentEnum.ToString(),              // Documentation Expédition
-
-                // ========== CHAMPS VIDES ==========
-                OPE_ADR4 = "",
-                OPE_FAX = "",
-                OPE_ALPHA1 = "",
-                OPE_ALPHA5 = "",
-                OPE_ALPHA9 = "",
-                OPE_ALPHA15 = "",
-                OPE_DATE15 = "",
-                OPE_ALPHA19 = "",
-                OPE_ALPHA20 = "",
-                OPE_ALPHA22 = "",
-                OPE_ALPHA23 = "",
-                OPE_ALPHA24 = "",
-                OPE_ALPHA25 = "",
-                OPE_ALPHA34 = "",
-                OPE_ALPHA35 = "",
-                OPE_ALPHA36 = "",
-                OPE_ALPHA37 = "",
-                OPE_ALPHA38 = "",
-
-                // ========== NOUVEAU CHAMP STATUT À LA FIN ==========
-                STATUT = ""  // Champ statut vide selon spécifications
-            };
-
-            // ========== TRAITEMENT SPÉCIAUX ==========
-            ProcessAddressWithUtf8(dynamics.Street, header);  // ✅ MODIFIÉ avec UTF-8
-            ProcessCarrierServiceCorrected(dynamics.CarrierServiceCode, header);
-
-            return header;
+            return CreateHeaderWithFullUtf8(dynamics);
         }
 
         /// <summary>
-        /// ✅ MODIFIÉ : Traitement de l'adresse avec UTF-8 pour l'en-tête
+        /// ✅ CORRIGÉ : Traitement de l'adresse avec UTF-8 pour l'en-tête
+        /// Applique le traitement UTF-8 complet sur l'adresse AVANT la répartition
         /// </summary>
         private void ProcessAddressWithUtf8(string? street, SpeedPackingSlipHeader header)
         {
@@ -190,8 +109,14 @@ namespace DynamicsToXmlTranslator.Mappers
                 return;
             }
 
-            // ✅ NOUVEAU : Application du traitement UTF-8 sur l'adresse
+            // ✅ CORRECTION PRINCIPALE : Appliquer le traitement UTF-8 complet avec suppression des entités
             string cleanStreet = _textProcessor.ProcessName(street, 150); // UTF-8 + max 150 pour 3 champs
+
+            // ✅ AJOUT : Log pour diagnostic
+            if (_logger.IsEnabled(LogLevel.Debug) && street != cleanStreet)
+            {
+                _logger.LogDebug($"Adresse UTF-8 transformée: '{street}' → '{cleanStreet}'");
+            }
 
             // Répartir sur 3 champs de 50 caractères max
             if (cleanStreet.Length <= 50)
@@ -219,6 +144,226 @@ namespace DynamicsToXmlTranslator.Mappers
                     header.OPE_ADR3 = "";
                 }
             }
+
+            // ✅ AJOUT : Log du résultat final
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug($"Adresse répartie: ADR1='{header.OPE_ADR1}' ADR2='{header.OPE_ADR2}' ADR3='{header.OPE_ADR3}'");
+            }
+        }
+
+        /// <summary>
+        /// ✅ NOUVEAU : Traitement UTF-8 complet pour TOUS les champs texte d'en-tête
+        /// </summary>
+        private SpeedPackingSlipHeader CreateHeaderWithFullUtf8(DynamicsPackingSlip dynamics)
+        {
+            var header = new SpeedPackingSlipHeader
+            {
+                // ========== VALEURS FIXES ==========
+                ACT_CODE = "COSMETIQUE",
+                OPE_TOP17 = "0",
+
+                // ========== DATES ==========
+                OPE_DACO = FormatDateForTxt(DateTime.Now),
+                OPE_DALI = FormatDateForTxt(dynamics.DlvDate),
+
+                // ========== RÉFÉRENCES AVEC UTF-8 ==========
+                OPE_REDO = _textProcessor.ProcessCode(dynamics.transRefId),
+                TIE_CODE = _textProcessor.ProcessCode(dynamics.customer),
+                OPE_RTIE = ApplyReferenceRuleWithUtf8(dynamics),
+                OPE_ALPHA17 = _textProcessor.ProcessCode(dynamics.pickingRouteID),
+
+                // ========== INFORMATIONS CLIENT AVEC UTF-8 COMPLET ==========
+                TIE_NOM = _textProcessor.ProcessName(dynamics.DeliveryName, 50),
+                OPE_ADVL = _textProcessor.ProcessName(dynamics.City, 50),
+                OPE_ADCP = _textProcessor.ProcessCode(dynamics.ZipCode),
+                OPE_CPAY = _textProcessor.ProcessCode(dynamics.ISOcode),
+                OPE_TEL = _textProcessor.ProcessCode(dynamics.Phone),
+                OPE_IMEL = _textProcessor.ProcessName(dynamics.Email, 100),
+                OPE_CONT = _textProcessor.ProcessName(dynamics.Contact, 50),
+
+                // ========== TRANSPORT AVEC UTF-8 ==========
+                OPE_CTRA = ApplyTransportCodeRuleWithUtf8(dynamics.CarrierCode),
+
+                // ========== COMMENTAIRES AVEC UTF-8 COMPLET ==========
+                OPE_COBP = _textProcessor.ProcessName(dynamics.CommentPreparation, 255),
+                OPE_COME = _textProcessor.ProcessName(dynamics.CommentExpedition, 255),
+                OPE_COBL = "",
+
+                // ========== AUTRES CHAMPS AVEC UTF-8 ==========
+                OPE_ALPHA21 = _textProcessor.ProcessCode(dynamics.SalesOriginId),
+                OPE_ALPHA6 = _textProcessor.ProcessCode(dynamics.SegmentId),
+                OPE_ALPHA31 = dynamics.SellableDays.ToString(),
+                OPE_ALPHA45 = _textProcessor.ProcessCode(dynamics.CardTypeRemer),
+                OPE_ALPHA46 = _textProcessor.ProcessCode(dynamics.BRTransportModeCode),
+                OPE_ALPHA47 = _textProcessor.ProcessCode(dynamics.BoxTypeBtc),
+                OPE_ALPHA48 = _textProcessor.ProcessCode(dynamics.DlvTermId),
+                OPE_GRP = _textProcessor.ProcessCode(dynamics.BROrderGrouping),
+                OPE_MPCO = _textProcessor.ProcessCode(dynamics.BRPackingCode),
+                OPE_UNICODE11 = _textProcessor.ProcessName(dynamics.MessagePerso, 255),
+                OPE_TOP25 = dynamics.BRPreparationEnum,
+                OPE_TOP28 = dynamics.BRShippingDocumentEnum.ToString(),
+
+                // ========== CHAMPS VIDES ==========
+                OPE_ADR4 = "",
+                OPE_FAX = "",
+                OPE_ALPHA1 = "",
+                OPE_ALPHA5 = "",
+                OPE_ALPHA9 = "",
+                OPE_ALPHA15 = "",
+                OPE_DATE15 = "",
+                OPE_ALPHA19 = "",
+                OPE_ALPHA20 = "",
+                OPE_ALPHA22 = "",
+                OPE_ALPHA23 = "",
+                OPE_ALPHA24 = "",
+                OPE_ALPHA25 = "",
+                OPE_ALPHA34 = "",
+                OPE_ALPHA35 = "",
+                OPE_ALPHA36 = "",
+                OPE_ALPHA37 = "",
+                OPE_ALPHA38 = "",
+                STATUT = ""
+            };
+
+            // ========== TRAITEMENT SPÉCIAUX AVEC UTF-8 ==========
+            ProcessAddressWithUtf8(dynamics.Street, header);
+            ProcessCarrierServiceWithUtf8(dynamics.CarrierServiceCode, header);
+
+            return header;
+        }
+
+        /// <summary>
+        /// ✅ CORRIGÉ : RG3 avec traitement UTF-8 complet
+        /// </summary>
+        private string ApplyTransportCodeRuleWithUtf8(string? carrierCode)
+        {
+            if (string.IsNullOrEmpty(carrierCode))
+                return "A AFFECTER";
+
+            string cleanCode = _textProcessor.ProcessCode(carrierCode);
+
+            if (cleanCode.ToUpper() == "A AFFECTER")
+                return "A AFFECTER";
+
+            return cleanCode;
+        }
+
+        /// <summary>
+        /// ✅ CORRIGÉ : RG1 et RG2 avec traitement UTF-8 complet
+        /// </summary>
+        private string ApplyReferenceRuleWithUtf8(DynamicsPackingSlip dynamics)
+        {
+            // RG1 : OPE_RTIE pour les commandes BTB
+            if (!string.IsNullOrEmpty(dynamics.PurchOrderFormNum) &&
+                dynamics.SalesOriginId?.ToUpper() == "BTB")
+            {
+                return _textProcessor.ProcessCode(dynamics.PurchOrderFormNum);
+            }
+
+            // RG2 : OPE_RTIE pour les commandes BTC
+            if (!string.IsNullOrEmpty(dynamics.BRPortalOrderNumber) &&
+                dynamics.SalesOriginId?.ToUpper() == "BTC")
+            {
+                return _textProcessor.ProcessCode(dynamics.BRPortalOrderNumber);
+            }
+
+            // Par défaut, utiliser la référence commande
+            return _textProcessor.ProcessCode(dynamics.transRefId);
+        }
+
+        /// <summary>
+        /// ✅ CORRIGÉ : Traitement service transporteur avec UTF-8 (mais préservation + et @)
+        /// </summary>
+        private void ProcessCarrierServiceWithUtf8(string? carrierServiceCode, SpeedPackingSlipHeader header)
+        {
+            if (string.IsNullOrEmpty(carrierServiceCode))
+            {
+                header.OPE_ALPHA40 = "";
+                header.OPE_ALPHA41 = "";
+                return;
+            }
+
+            // ✅ NOUVEAU : Appliquer d'abord le traitement UTF-8 mais préserver + et @
+            string utf8Processed = _textProcessor.ProcessText(carrierServiceCode);
+
+            // Restaurer les caractères + et @ s'ils ont été supprimés
+            string serviceCode = RestorePlusAndAt(carrierServiceCode, utf8Processed);
+
+            // Log pour diagnostic
+            if (_logger.IsEnabled(LogLevel.Debug) && carrierServiceCode != serviceCode)
+            {
+                _logger.LogDebug($"Service transporteur UTF-8: '{carrierServiceCode}' → '{serviceCode}'");
+            }
+
+            // Cas spécial MAD
+            if (serviceCode.Equals("MAD", StringComparison.OrdinalIgnoreCase))
+            {
+                header.OPE_ALPHA40 = "MAD";
+                header.OPE_ALPHA41 = "";
+                return;
+            }
+
+            // Séparer par @
+            var parts = serviceCode.Split('@');
+
+            if (parts.Length >= 1 && !string.IsNullOrWhiteSpace(parts[0]))
+            {
+                header.OPE_ALPHA40 = parts[0].Trim();
+            }
+            else
+            {
+                header.OPE_ALPHA40 = "";
+            }
+
+            if (parts.Length >= 2 && !string.IsNullOrWhiteSpace(parts[1]))
+            {
+                header.OPE_ALPHA41 = parts[1].Trim();
+            }
+            else
+            {
+                header.OPE_ALPHA41 = "";
+            }
+        }
+
+        /// <summary>
+        /// ✅ NOUVEAU : Restaure les caractères + et @ après traitement UTF-8
+        /// </summary>
+        private string RestorePlusAndAt(string original, string processed)
+        {
+            if (string.IsNullOrEmpty(original) || string.IsNullOrEmpty(processed))
+                return processed ?? "";
+
+            var result = processed;
+
+            // Restaurer les + s'ils ont été supprimés
+            if (original.Contains("+") && !result.Contains("+"))
+            {
+                // Rechercher la position approximative du + dans l'original
+                for (int i = 0; i < original.Length && i < result.Length; i++)
+                {
+                    if (original[i] == '+')
+                    {
+                        result = result.Insert(Math.Min(i, result.Length), "+");
+                        break;
+                    }
+                }
+            }
+
+            // Restaurer les @ s'ils ont été supprimés
+            if (original.Contains("@") && !result.Contains("@"))
+            {
+                var originalParts = original.Split('@');
+                if (originalParts.Length == 2)
+                {
+                    // Trouver la position approximative du @
+                    var firstPartProcessed = _textProcessor.ProcessText(originalParts[0]);
+                    var secondPartProcessed = _textProcessor.ProcessText(originalParts[1]);
+                    result = firstPartProcessed + "@" + secondPartProcessed;
+                }
+            }
+
+            return result;
         }
 
 
