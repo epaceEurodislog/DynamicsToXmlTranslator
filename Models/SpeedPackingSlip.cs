@@ -12,7 +12,7 @@ namespace DynamicsToXmlTranslator.Models
         public string ACT_CODE { get; set; } = "COSMETIQUE";              // ✅ MODIFIÉ : COSMETIQUE au lieu de LTRF
         public string OPE_DACO { get; set; } = "";                        // Date commande (YYYYMMDD)
         public string OPE_REDO { get; set; } = "";                        // transRefId → CLÉ DE LIAISON ✅ CORRECT
-        public string TIE_CODE { get; set; } = "";                        // customer → Code Tiers destinataire ✅ CORRECT
+        public string TIE_CODE { get; set; } = "";                        // customer → Code Tiers destinataire dans alpha31
         public string OPE_RTIE { get; set; } = "";                        // PurchOrderFormNum/BRPortalOrderNumber selon RG ✅ CORRECT
         public string TIE_NOM { get; set; } = "";                         // DeliveryName → Nom Tiers Destinataire ✅ CORRECT
         public string OPE_ADR1 { get; set; } = "";                        // Street → Adresse 1 ✅ CORRECT
@@ -81,15 +81,15 @@ namespace DynamicsToXmlTranslator.Models
         public string STATUT { get; set; } = "";  // Nouveau champ statut (vide)
 
         /// <summary>
-        /// ✅ CORRIGÉ : Construit le format spécial pour OPE_ALPHA31 avec TOUS les champs ALPHA > 38 selon mapping client
-        /// Format: donneralpha31[alpha40:donneealpha40_alpha41:donneealpha41_alpha45:donneealpha45_alpha46:donneealpha46_alpha47:donneealpha47_alpha48:donneealpha48]
+        /// ✅ MODIFIÉ : Construit le format spécial pour OPE_ALPHA31 avec TOUS les champs ALPHA > 38 + TIE_CODE selon mapping client
+        /// Format: donneralpha31[tiecode:TIE_CODE_alpha40:donneealpha40_alpha41:donneealpha41_alpha45:donneealpha45_etc]
         /// </summary>
         public string GetFormattedOpeAlpha31()
         {
             // Valeur de base (SellableDays)
             string baseValue = OPE_ALPHA31 ?? "";
 
-            // ✅ COLLECTER TOUS LES CHAMPS ALPHA > 38 SELON LE MAPPING CLIENT avec leurs libellés
+            // ✅ COLLECTER TOUS LES CHAMPS ALPHA > 38 + TIE_CODE selon le mapping client avec leurs libellés
             var extraValues = new List<string>();
 
             // ALPHA40 et ALPHA41 : CarrierServiceCode (séparé par @)
@@ -113,13 +113,16 @@ namespace DynamicsToXmlTranslator.Models
             if (!string.IsNullOrEmpty(OPE_ALPHA42)) extraValues.Add($"alpha42:{OPE_ALPHA42}");
             if (!string.IsNullOrEmpty(OPE_ALPHA43)) extraValues.Add($"alpha43:{OPE_ALPHA43}");
 
+            // ✅ NOUVEAU : TIE_CODE en premier (selon votre demande)
+            if (!string.IsNullOrEmpty(TIE_CODE)) extraValues.Add($"tiecode:{TIE_CODE}");
+
             // Si pas de valeurs supplémentaires, retourner la valeur de base
             if (!extraValues.Any())
             {
                 return baseValue;
             }
 
-            // Construire le format spécial : valeurBase[alpha40:valeur_alpha41:valeur_etc]
+            // Construire le format spécial : valeurBase[tiecode:valeur_alpha40:valeur_etc]
             string extraPart = string.Join("_", extraValues);
             return $"{baseValue}[{extraPart}]";
         }

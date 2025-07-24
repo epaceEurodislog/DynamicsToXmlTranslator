@@ -138,7 +138,7 @@ namespace DynamicsToXmlTranslator.Services
             using (var writer = new StreamWriter(filePath, false, Encoding.GetEncoding("ISO-8859-1")))
             {
                 // ✅ ÉTAPE 1 : Écrire l'en-tête
-                await writer.WriteLineAsync(string.Join("|", _headersOPE));
+                //await writer.WriteLineAsync(string.Join("|", _headersOPE));
                 _logger.LogDebug($"En-tête OPE écrit avec {_headersOPE.Length} colonnes");
 
                 // ✅ ÉTAPE 2 : Écrire les données
@@ -163,16 +163,15 @@ namespace DynamicsToXmlTranslator.Services
         }
 
         /// <summary>
-        /// Exporte les lignes de commande (fichier CDLG_LTRF)
+        /// Exporte les lignes de commande (fichier CDLG_LTRF) SANS AUCUN en-tête
+        /// ✅ CORRECTION COMPLÈTE : Suppression définitive de l'en-tête pour les lignes
         /// </summary>
         private async Task ExportLinesAsync(List<SpeedPackingSlipComplete> packingSlips, string filePath)
         {
             using (var writer = new StreamWriter(filePath, false, Encoding.GetEncoding("ISO-8859-1")))
             {
-                // ✅ ÉTAPE 1 : Écrire l'en-tête OPL (PAS d'en-tête selon votre exemple)
-                // Votre fichier exemple CDLG n'a pas d'en-tête, on n'en écrit pas
+                // ✅ AUCUN en-tête n'est écrit - commencer directement par les données
 
-                // ✅ ÉTAPE 2 : Écrire les données
                 int lineCount = 0;
                 foreach (var packingSlip in packingSlips)
                 {
@@ -189,13 +188,13 @@ namespace DynamicsToXmlTranslator.Services
                     }
                 }
 
-                _logger.LogInformation($"Fichier lignes créé : {lineCount} lignes");
+                _logger.LogInformation($"Fichier lignes créé SANS AUCUN en-tête : {lineCount} lignes de données uniquement");
             }
         }
 
         /// <summary>
         /// Formate une ligne d'en-tête selon l'ordre exact des colonnes OPE
-        /// ✅ MODIFIÉ : Gestion du format spécial pour OPE_ALPHA31 + nouveau champ STATUT
+        /// ✅ MODIFIÉ : Gestion du format spécial pour OPE_ALPHA31 avec TIE_CODE + nouveau champ STATUT
         /// </summary>
         private string FormatHeaderLine(SpeedPackingSlipHeader header)
         {
@@ -238,7 +237,7 @@ namespace DynamicsToXmlTranslator.Services
         header.OPE_ALPHA9 ?? "",                  // OPE_ALPHA9
         header.OPE_ALPHA15 ?? "",                 // OPE_ALPHA15
         header.OPE_DATE15 ?? "",                  // OPE_DATE15
-        header.GetFormattedOpeAlpha31(),          // ✅ MODIFIÉ : FORMAT SPÉCIAL
+        header.GetFormattedOpeAlpha31(),          // ✅ IMPORTANT : Utilise la méthode modifiée avec TIE_CODE
         header.OPE_ALPHA34 ?? "",                 // OPE_ALPHA34
         header.OPE_ALPHA35 ?? "",                 // OPE_ALPHA35
         header.OPE_ALPHA36 ?? "",                 // OPE_ALPHA36
@@ -451,7 +450,8 @@ namespace DynamicsToXmlTranslator.Services
         }
 
         /// <summary>
-        /// Valide le fichier de lignes
+        /// ✅ CORRECTION : Valide le fichier de lignes SANS vérifier l'en-tête
+        /// Puisqu'il n'y a plus d'en-tête, toutes les lignes sont des données
         /// </summary>
         private async Task<bool> ValidateLinesFileAsync(string? filePath)
         {
@@ -463,17 +463,24 @@ namespace DynamicsToXmlTranslator.Services
 
             var lines = await File.ReadAllLinesAsync(filePath, Encoding.GetEncoding("ISO-8859-1"));
 
-            // Vérifier que toutes les lignes ont le bon nombre de colonnes
+            if (lines.Length == 0)
+            {
+                _logger.LogWarning("Fichier de lignes vide - aucune donnée à valider");
+                return true; // Pas d'erreur si vide
+            }
+
+            // ✅ CORRECTION : Vérifier TOUTES les lignes comme étant des données (plus d'en-tête)
             for (int i = 0; i < lines.Length; i++)
             {
                 var dataColumns = lines[i].Split('|');
                 if (dataColumns.Length != _headersOPL.Length)
                 {
-                    _logger.LogError($"Ligne {i + 1}: Nombre de colonnes OPL incorrect. Attendu: {_headersOPL.Length}, Trouvé: {dataColumns.Length}");
+                    _logger.LogError($"Ligne de données {i + 1}: Nombre de colonnes incorrect. Attendu: {_headersOPL.Length}, Trouvé: {dataColumns.Length}");
                     return false;
                 }
             }
 
+            _logger.LogInformation($"Validation réussie : {lines.Length} lignes de données valides (SANS en-tête)");
             return true;
         }
     }

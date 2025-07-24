@@ -153,7 +153,7 @@ namespace DynamicsToXmlTranslator.Mappers
         }
 
         /// <summary>
-        /// ✅ NOUVEAU : Traitement UTF-8 complet pour TOUS les champs texte d'en-tête
+        /// ✅ MODIFIÉ : Traitement UTF-8 complet pour TOUS les champs texte d'en-tête + TIE_CODE dans ALPHA31
         /// </summary>
         private SpeedPackingSlipHeader CreateHeaderWithFullUtf8(DynamicsPackingSlip dynamics)
         {
@@ -169,7 +169,7 @@ namespace DynamicsToXmlTranslator.Mappers
 
                 // ========== RÉFÉRENCES AVEC UTF-8 ==========
                 OPE_REDO = _textProcessor.ProcessCode(dynamics.transRefId),
-                TIE_CODE = _textProcessor.ProcessCode(dynamics.customer),
+                TIE_CODE = _textProcessor.ProcessCode(dynamics.customer), // ✅ IMPORTANT : Bien définir TIE_CODE ici
                 OPE_RTIE = ApplyReferenceRuleWithUtf8(dynamics),
                 OPE_ALPHA17 = _textProcessor.ProcessCode(dynamics.pickingRouteID),
 
@@ -193,7 +193,7 @@ namespace DynamicsToXmlTranslator.Mappers
                 // ========== AUTRES CHAMPS AVEC UTF-8 ==========
                 OPE_ALPHA21 = _textProcessor.ProcessCode(dynamics.SalesOriginId),
                 OPE_ALPHA6 = _textProcessor.ProcessCode(dynamics.SegmentId),
-                OPE_ALPHA31 = dynamics.SellableDays.ToString(),
+                OPE_ALPHA31 = dynamics.SellableDays.ToString(), // ✅ Valeur de base, TIE_CODE sera ajouté via GetFormattedOpeAlpha31()
                 OPE_ALPHA45 = _textProcessor.ProcessCode(dynamics.CardTypeRemer),
                 OPE_ALPHA46 = _textProcessor.ProcessCode(dynamics.BRTransportModeCode),
                 OPE_ALPHA47 = _textProcessor.ProcessCode(dynamics.BoxTypeBtc),
