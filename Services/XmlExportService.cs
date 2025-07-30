@@ -244,7 +244,7 @@ namespace DynamicsToXmlTranslator.Services
         }
 
         /// <summary>
-        /// ✅ NOUVELLE MÉTHODE : Force les balises fermantes au lieu des balises auto-fermantes
+        /// ✅ CORRECTION : Force les balises fermantes ET supprime les entités SANS casser le formatage
         /// </summary>
         private async Task ForceClosingTagsAsync(string filePath)
         {
@@ -252,14 +252,17 @@ namespace DynamicsToXmlTranslator.Services
             {
                 string content = await File.ReadAllTextAsync(filePath, Encoding.GetEncoding("ISO-8859-1"));
 
-                // Remplacer les balises auto-fermantes par des balises fermantes pour les articles
+                // ✅ ÉTAPE 1 : Suppression des entités UNIQUEMENT dans le contenu des balises (pas dans la structure XML)
+                content = RemoveEntitiesFromXmlContent(content);
+
+                // ✅ ÉTAPE 2 : Remplacer les balises auto-fermantes par des balises fermantes
                 var tagsToReplace = new[]
                 {
-                    "ART_CCLI", "ART_CODE", "ART_CODC", "ART_DESL", "ART_ALPHA2", "ART_EANU",
-                    "ART_ALPHA17", "ART_ALPHA3", "ART_STAT", "ART_ALPHA8", "ART_ALPHA14",
-                    "ART_RSTK", "ART_SPCB", "ART_ALPHA18", "ART_ALPHA24", "ART_ALPHA26",
-                    "ART_NSE", "ART_EANC"
-                };
+            "ART_CCLI", "ART_CODE", "ART_CODC", "ART_DESL", "ART_ALPHA2", "ART_EANU",
+            "ART_ALPHA17", "ART_ALPHA3", "ART_STAT", "ART_ALPHA8", "ART_ALPHA14",
+            "ART_RSTK", "ART_SPCB", "ART_ALPHA18", "ART_ALPHA24", "ART_ALPHA26",
+            "ART_NSE", "ART_EANC"
+        };
 
                 foreach (var tag in tagsToReplace)
                 {
@@ -270,11 +273,127 @@ namespace DynamicsToXmlTranslator.Services
                 }
 
                 await File.WriteAllTextAsync(filePath, content, Encoding.GetEncoding("ISO-8859-1"));
+
+                _logger.LogDebug($"Post-traitement avec préservation du formatage terminé pour {filePath}");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Erreur lors du post-traitement des balises fermantes pour {filePath}");
+                _logger.LogError(ex, $"Erreur lors du post-traitement pour {filePath}");
             }
+        }
+
+
+        /// <summary>
+        /// ✅ NOUVELLE MÉTHODE : Supprime les entités UNIQUEMENT dans le contenu des balises XML
+        /// Préserve l'indentation et la structure XML
+        /// </summary>
+        private string RemoveEntitiesFromXmlContent(string xmlContent)
+        {
+            if (string.IsNullOrEmpty(xmlContent))
+                return "";
+
+            // Pattern pour capturer le contenu entre les balises : >contenu<
+            var pattern = @">([^<]*)<";
+
+            var result = System.Text.RegularExpressions.Regex.Replace(xmlContent, pattern, match =>
+            {
+                string tagContent = match.Groups[1].Value;
+
+                // Si le contenu est vide ou ne contient que des espaces, le garder tel quel
+                if (string.IsNullOrWhiteSpace(tagContent))
+                {
+                    return match.Value;
+                }
+
+                // Supprimer les entités du contenu SANS toucher aux espaces/indentation
+                string cleanContent = RemoveEntitiesFromText(tagContent);
+
+                return $">{cleanContent}<";
+            });
+
+            return result;
+        }
+
+        /// <summary>
+        /// ✅ NOUVELLE MÉTHODE : Supprime UNIQUEMENT les entités HTML/XML d'un texte
+        /// </summary>
+        private string RemoveEntitiesFromText(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+                return "";
+
+            string result = text;
+
+            // ========== SUPPRESSION CIBLÉE DES ENTITÉS ==========
+            // Entités imbriquées d'abord
+            result = result.Replace("&amp;apos;", "");      // &amp;apos; → supprimé
+            result = result.Replace("&amp;quot;", "");      // &amp;quot; → supprimé
+            result = result.Replace("&amp;lt;", "");        // &amp;lt; → supprimé
+            result = result.Replace("&amp;gt;", "");        // &amp;gt; → supprimé
+            result = result.Replace("&amp;nbsp;", " ");     // &amp;nbsp; → espace
+            result = result.Replace("&amp;amp;", "");       // &amp;amp; → supprimé
+
+            // Entités standards
+            result = result.Replace("&amp;", "");           // & → supprimé
+            result = result.Replace("&apos;", "");          // ' → supprimé
+            result = result.Replace("&quot;", "");          // " → supprimé
+            result = result.Replace("&lt;", "");            // < → supprimé
+            result = result.Replace("&gt;", "");            // > → supprimé
+            result = result.Replace("&nbsp;", " ");         // espace insécable → espace
+
+            // Entités numériques
+            result = result.Replace("&#39;", "");           // ' → supprimé
+            result = result.Replace("&#34;", "");           // " → supprimé
+            result = result.Replace("&#38;", "");           // & → supprimé
+            result = result.Replace("&#60;", "");           // < → supprimé
+            result = result.Replace("&#62;", "");           // > → supprimé
+            result = result.Replace("&#160;", " ");         // espace insécable → espace
+
+            // Entités hexadécimales
+            result = result.Replace("&#x27;", "");          // ' → supprimé
+            result = result.Replace("&#x22;", "");          // " → supprimé
+            result = result.Replace("&#x26;", "");          // & → supprimé
+            result = result.Replace("&#x3C;", "");          // < → supprimé
+            result = result.Replace("&#x3c;", "");          // < minuscule → supprimé
+            result = result.Replace("&#x3E;", "");          // > → supprimé
+            result = result.Replace("&#x3e;", "");          // > minuscule → supprimé
+            result = result.Replace("&#xA0;", " ");         // espace insécable → espace
+            result = result.Replace("&#xa0;", " ");         // espace insécable minuscule → espace
+
+            // Regex pour capturer les entités restantes
+            result = System.Text.RegularExpressions.Regex.Replace(result, @"&#\d+;", "");
+            result = System.Text.RegularExpressions.Regex.Replace(result, @"&#x[0-9a-fA-F]+;", "");
+            result = System.Text.RegularExpressions.Regex.Replace(result, @"&[a-zA-Z][a-zA-Z0-9]*;", "");
+
+            // Nettoyer les espaces multiples DANS LE CONTENU seulement
+            result = System.Text.RegularExpressions.Regex.Replace(result, @" +", " ");
+            result = result.Trim();
+
+            return result;
+        }
+
+        /// <summary>
+        /// ✅ NOUVELLE MÉTHODE : Validation qu'aucune entité ne subsiste
+        /// </summary>
+        private bool ValidateNoEntitiesRemain(string content)
+        {
+            if (string.IsNullOrEmpty(content))
+                return true;
+
+            // Chercher toutes les entités restantes
+            var remainingEntities = System.Text.RegularExpressions.Regex.Matches(content, @"&[^;]*;");
+
+            if (remainingEntities.Count > 0)
+            {
+                _logger.LogWarning($"{remainingEntities.Count} entités détectées après nettoyage:");
+                foreach (System.Text.RegularExpressions.Match entity in remainingEntities.Take(10)) // Max 10 pour éviter le spam
+                {
+                    _logger.LogWarning($"  Entité restante: '{entity.Value}'");
+                }
+                return false;
+            }
+
+            return true;
         }
 
         /// <summary>

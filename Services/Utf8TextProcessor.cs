@@ -37,8 +37,11 @@ namespace DynamicsToXmlTranslator.Services
                 // ✅ ÉTAPE 1 : Normalisation Unicode AVANT tout traitement
                 string normalized = input.Normalize(NormalizationForm.FormKD);
 
+                // ✅ ÉTAPE 1.5 : NOUVEAU - Traitement spécialisé des entités imbriquées
+                string nestedCleaned = DecodeNestedEntities(normalized);
+
                 // ✅ ÉTAPE 2 : Suppression EXHAUSTIVE des entités HTML/XML
-                string cleaned = UnescapeHtmlEntities(normalized);
+                string cleaned = UnescapeHtmlEntities(nestedCleaned);
 
                 // ✅ ÉTAPE 3 : Remplacement des caractères spéciaux
                 string processed = ReplaceSpecialCharacters(cleaned);
@@ -84,7 +87,40 @@ namespace DynamicsToXmlTranslator.Services
         }
 
         /// <summary>
-        /// ✅ SUPPRESSION EXHAUSTIVE de TOUTES les entités HTML/XML possibles
+        /// ✅ NOUVEAU : Méthode de test pour les entités imbriquées
+        /// </summary>
+        public void LogNestedEntityExamples(ILogger logger)
+        {
+            var nestedExamples = new Dictionary<string, string>
+    {
+        {"MODE D&amp;apos;EMPLOI POUR MACHINE RF", "MODE DEMPLOI POUR MACHINE RF"},
+        {"L&amp;apos;Oréal &amp;amp; Co", "LOreal  Co"},
+        {"Produit &amp;quot;Premium&amp;quot;", "Produit Premium"},
+        {"Société &amp;lt;Test&amp;gt;", "Societe Test"},
+        {"Text &amp;nbsp; avec espaces", "Text  avec espaces"},
+        {"Code &#38;#39;spécial&#38;#39;", "Code special"},
+        {"Marque &#x26;#x27;test&#x26;#x27;", "Marque test"}
+    };
+
+            logger.LogInformation("=== EXEMPLES ENTITÉS IMBRIQUÉES (CORRECTION) ===");
+            foreach (var example in nestedExamples)
+            {
+                var processed = ProcessText(example.Key);
+                var expected = example.Value;
+                var status = processed == expected ? "✅" : "❌";
+
+                logger.LogInformation($"{status} '{example.Key}' → '{processed}'");
+                if (processed != expected)
+                {
+                    logger.LogWarning($"   Attendu: '{expected}'");
+                }
+            }
+            logger.LogInformation("=== FIN EXEMPLES ENTITÉS IMBRIQUÉES ===");
+        }
+
+        /// <summary>
+        /// ✅ CORRECTION COMPLÈTE : Suppression exhaustive de TOUTES les entités HTML/XML possibles
+        /// Traite les cas d'entités imbriquées comme &amp;apos; → &apos; → '
         /// </summary>
         private string UnescapeHtmlEntities(string input)
         {
@@ -93,61 +129,122 @@ namespace DynamicsToXmlTranslator.Services
 
             string result = input;
 
-            // ========== ENTITÉS NOMMÉES COMMUNES ==========
-            result = result.Replace("&amp;", "");       // & → supprimé
-            result = result.Replace("&apos;", "");      // ' → supprimé
-            result = result.Replace("&quot;", "");      // " → supprimé
-            result = result.Replace("&lt;", "");        // < → supprimé
-            result = result.Replace("&gt;", "");        // > → supprimé
-            result = result.Replace("&nbsp;", " ");     // espace insécable → espace normal
+            // ========== BOUCLE DE DÉCODAGE MULTIPLE ==========
+            // Répéter jusqu'à ce qu'il n'y ait plus d'entités
+            int maxIterations = 5; // Sécurité contre les boucles infinies
+            int iteration = 0;
 
-            // ========== ENTITÉS NUMÉRIQUES DÉCIMALES ==========
-            result = result.Replace("&#39;", "");       // ' → supprimé
-            result = result.Replace("&#34;", "");       // " → supprimé
-            result = result.Replace("&#38;", "");       // & → supprimé
-            result = result.Replace("&#60;", "");       // < → supprimé
-            result = result.Replace("&#62;", "");       // > → supprimé
-            result = result.Replace("&#160;", " ");     // espace insécable → espace
+            while (iteration < maxIterations)
+            {
+                string beforeDecoding = result;
 
-            // ========== ENTITÉS HEXADÉCIMALES ==========
-            result = result.Replace("&#x27;", "");      // ' → supprimé
-            result = result.Replace("&#x22;", "");      // " → supprimé
-            result = result.Replace("&#x26;", "");      // & → supprimé
-            result = result.Replace("&#x3C;", "");      // < → supprimé
-            result = result.Replace("&#x3c;", "");      // < (minuscule) → supprimé
-            result = result.Replace("&#x3E;", "");      // > → supprimé
-            result = result.Replace("&#x3e;", "");      // > (minuscule) → supprimé
-            result = result.Replace("&#xA0;", " ");     // espace insécable → espace
-            result = result.Replace("&#xa0;", " ");     // espace insécable (minuscule) → espace
+                // ========== ENTITÉS NOMMÉES COMMUNES ==========
+                result = result.Replace("&amp;", "&");       // & → & (TEMPORAIRE pour décoder les imbrications)
+                result = result.Replace("&apos;", "");        // ' → supprimé
+                result = result.Replace("&quot;", "");        // " → supprimé
+                result = result.Replace("&lt;", "");          // < → supprimé
+                result = result.Replace("&gt;", "");          // > → supprimé
+                result = result.Replace("&nbsp;", " ");       // espace insécable → espace normal
 
-            // ========== ENTITÉS ÉTENDUES ==========
-            result = result.Replace("&copy;", "");      // © → supprimé
-            result = result.Replace("&reg;", "");       // ® → supprimé
-            result = result.Replace("&trade;", "");     // ™ → supprimé
-            result = result.Replace("&euro;", "");      // € → supprimé
-            result = result.Replace("&pound;", "");     // £ → supprimé
-            result = result.Replace("&yen;", "");       // ¥ → supprimé
-            result = result.Replace("&cent;", "");      // ¢ → supprimé
-            result = result.Replace("&sect;", "");      // § → supprimé
-            result = result.Replace("&para;", "");      // ¶ → supprimé
-            result = result.Replace("&middot;", "");    // · → supprimé
-            result = result.Replace("&hellip;", "");    // … → supprimé
-            result = result.Replace("&mdash;", "");     // — → supprimé
-            result = result.Replace("&ndash;", "");     // – → supprimé
-            result = result.Replace("&lsquo;", "");     // ' → supprimé
-            result = result.Replace("&rsquo;", "");     // ' → supprimé
-            result = result.Replace("&ldquo;", "");     // " → supprimé
-            result = result.Replace("&rdquo;", "");     // " → supprimé
-            result = result.Replace("&laquo;", "");     // « → supprimé
-            result = result.Replace("&raquo;", "");     // » → supprimé
+                // ========== ENTITÉS NUMÉRIQUES DÉCIMALES ==========
+                result = result.Replace("&#39;", "");         // ' → supprimé
+                result = result.Replace("&#34;", "");         // " → supprimé
+                result = result.Replace("&#38;", "&");        // & → & (TEMPORAIRE)
+                result = result.Replace("&#60;", "");         // < → supprimé
+                result = result.Replace("&#62;", "");         // > → supprimé
+                result = result.Replace("&#160;", " ");       // espace insécable → espace
 
-            // ========== SUPPRESSION PAR REGEX (SÉCURITÉ) ==========
-            // Supprime toutes les entités de type &#nombre; et &#xhex;
-            result = System.Text.RegularExpressions.Regex.Replace(result, @"&#\d+;", "");
-            result = System.Text.RegularExpressions.Regex.Replace(result, @"&#x[0-9a-fA-F]+;", "");
+                // ========== ENTITÉS HEXADÉCIMALES ==========
+                result = result.Replace("&#x27;", "");        // ' → supprimé
+                result = result.Replace("&#x22;", "");        // " → supprimé
+                result = result.Replace("&#x26;", "&");       // & → & (TEMPORAIRE)
+                result = result.Replace("&#x3C;", "");        // < → supprimé
+                result = result.Replace("&#x3c;", "");        // < (minuscule) → supprimé
+                result = result.Replace("&#x3E;", "");        // > → supprimé
+                result = result.Replace("&#x3e;", "");        // > (minuscule) → supprimé
+                result = result.Replace("&#xA0;", " ");       // espace insécable → espace
+                result = result.Replace("&#xa0;", " ");       // espace insécable (minuscule) → espace
 
-            // Supprime toutes les entités nommées restantes de type &nom;
-            result = System.Text.RegularExpressions.Regex.Replace(result, @"&[a-zA-Z][a-zA-Z0-9]*;", "");
+                // ========== ENTITÉS ÉTENDUES ==========
+                result = result.Replace("&copy;", "");        // © → supprimé
+                result = result.Replace("&reg;", "");         // ® → supprimé
+                result = result.Replace("&trade;", "");       // ™ → supprimé
+                result = result.Replace("&euro;", "");        // € → supprimé
+                result = result.Replace("&pound;", "");       // £ → supprimé
+                result = result.Replace("&yen;", "");         // ¥ → supprimé
+                result = result.Replace("&cent;", "");        // ¢ → supprimé
+                result = result.Replace("&sect;", "");        // § → supprimé
+                result = result.Replace("&para;", "");        // ¶ → supprimé
+                result = result.Replace("&middot;", "");      // · → supprimé
+                result = result.Replace("&hellip;", "");      // … → supprimé
+                result = result.Replace("&mdash;", "");       // — → supprimé
+                result = result.Replace("&ndash;", "");       // – → supprimé
+                result = result.Replace("&lsquo;", "");       // ' → supprimé
+                result = result.Replace("&rsquo;", "");       // ' → supprimé
+                result = result.Replace("&ldquo;", "");       // " → supprimé
+                result = result.Replace("&rdquo;", "");       // " → supprimé
+                result = result.Replace("&laquo;", "");       // « → supprimé
+                result = result.Replace("&raquo;", "");       // » → supprimé
+
+                // ========== SUPPRESSION PAR REGEX (SÉCURITÉ) ==========
+                // Supprime toutes les entités de type &#nombre; et &#xhex;
+                result = System.Text.RegularExpressions.Regex.Replace(result, @"&#\d+;", "");
+                result = System.Text.RegularExpressions.Regex.Replace(result, @"&#x[0-9a-fA-F]+;", "");
+
+                // Supprime toutes les entités nommées restantes de type &nom;
+                result = System.Text.RegularExpressions.Regex.Replace(result, @"&[a-zA-Z][a-zA-Z0-9]*;", "");
+
+                // Si aucun changement, on peut arrêter
+                if (result == beforeDecoding)
+                {
+                    break;
+                }
+
+                iteration++;
+            }
+
+            // ========== NETTOYAGE FINAL DES & TEMPORAIRES ==========
+            // Maintenant supprimer tous les & restants (ceux qui étaient dans les entités)
+            result = result.Replace("&", "");
+
+            // Log pour diagnostic
+            if (input != result && _logger.IsEnabled(LogLevel.Trace))
+            {
+                _logger.LogTrace($"Entités décodées en {iteration + 1} itération(s): '{input}' → '{result}'");
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// ✅ NOUVEAU : Méthode spécialisée pour détecter et traiter les entités imbriquées
+        /// </summary>
+        private string DecodeNestedEntities(string input)
+        {
+            if (string.IsNullOrEmpty(input))
+                return "";
+
+            string result = input;
+
+            // Cas spécifiques d'entités imbriquées fréquentes
+            var nestedPatterns = new Dictionary<string, string>
+    {
+        { "&amp;apos;", "" },      // &amp;apos; → supprimé
+        { "&amp;quot;", "" },      // &amp;quot; → supprimé  
+        { "&amp;lt;", "" },        // &amp;lt; → supprimé
+        { "&amp;gt;", "" },        // &amp;gt; → supprimé
+        { "&amp;nbsp;", " " },     // &amp;nbsp; → espace
+        { "&amp;amp;", "" },       // &amp;amp; → supprimé
+        { "&#38;#39;", "" },       // &#38;#39; → supprimé
+        { "&#38;#34;", "" },       // &#38;#34; → supprimé
+        { "&#x26;#x27;", "" },     // &#x26;#x27; → supprimé
+        { "&#x26;#x22;", "" }      // &#x26;#x22; → supprimé
+    };
+
+            foreach (var pattern in nestedPatterns)
+            {
+                result = result.Replace(pattern.Key, pattern.Value);
+            }
 
             return result;
         }

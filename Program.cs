@@ -1382,6 +1382,9 @@ namespace DynamicsToXmlTranslator
             // ✅ NOUVEAU : Log des exemples de transformation au démarrage
             _textProcessor.LogTransformationExamples(_logger);
 
+            // ✅ NOUVEAU : Test des entités imbriquées
+            _textProcessor.LogNestedEntityExamples(_logger);
+
             // Services Articles (MODIFIÉS pour inclure UTF-8)
             _databaseService = new DatabaseService(_configuration, loggerFactory.CreateLogger<DatabaseService>());
             _xmlExportService = new XmlExportService(_configuration, loggerFactory.CreateLogger<XmlExportService>(), _databaseService);

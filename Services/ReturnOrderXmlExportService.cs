@@ -200,7 +200,7 @@ namespace DynamicsToXmlTranslator.Services
         }
 
         /// <summary>
-        /// ✅ NOUVELLE MÉTHODE : Force les balises fermantes au lieu des balises auto-fermantes
+        /// ✅ CORRECTION : Force les balises fermantes ET supprime les entités SANS casser le formatage
         /// </summary>
         private async Task ForceClosingTagsAsync(string filePath)
         {
@@ -208,18 +208,19 @@ namespace DynamicsToXmlTranslator.Services
             {
                 string content = await File.ReadAllTextAsync(filePath, Encoding.GetEncoding("ISO-8859-1"));
 
+                // ✅ SUPPRESSION DES ENTITÉS UNIQUEMENT DANS LE CONTENU
+                content = RemoveEntitiesFromXmlContent(content);
+
                 // Remplacer les balises auto-fermantes par des balises fermantes
                 var tagsToReplace = new[]
                 {
-                    "REA_LOT1", "REA_LOT2", "REA_DLUO", "REA_NoSU", "REA_COM", "REA_RFAF",
-                    "SalesStatus", "ReturnDispositionCodeID", "SalesName", "InventLocationId"
-                };
+            "REA_LOT1", "REA_LOT2", "REA_DLUO", "REA_NoSU", "REA_COM", "REA_RFAF",
+            "SalesStatus", "ReturnDispositionCodeID", "SalesName", "InventLocationId"
+        };
 
                 foreach (var tag in tagsToReplace)
                 {
-                    // Remplacer <TAG /> par <TAG></TAG>
                     content = content.Replace($"<{tag} />", $"<{tag}></{tag}>");
-                    // Remplacer <TAG/> par <TAG></TAG> (sans espace)
                     content = content.Replace($"<{tag}/>", $"<{tag}></{tag}>");
                 }
 
@@ -227,8 +228,80 @@ namespace DynamicsToXmlTranslator.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Erreur lors du post-traitement des balises fermantes pour {filePath}");
+                _logger.LogError(ex, $"Erreur lors du post-traitement pour {filePath}");
             }
+        }
+
+        /// <summary>
+        /// ✅ Supprime les entités UNIQUEMENT dans le contenu des balises XML
+        /// </summary>
+        private string RemoveEntitiesFromXmlContent(string xmlContent)
+        {
+            if (string.IsNullOrEmpty(xmlContent))
+                return "";
+
+            var pattern = @">([^<]*)<";
+
+            return System.Text.RegularExpressions.Regex.Replace(xmlContent, pattern, match =>
+            {
+                string tagContent = match.Groups[1].Value;
+
+                if (string.IsNullOrWhiteSpace(tagContent))
+                {
+                    return match.Value;
+                }
+
+                string cleanContent = RemoveEntitiesFromText(tagContent);
+                return $">{cleanContent}<";
+            });
+        }
+
+        /// <summary>
+        /// ✅ Supprime UNIQUEMENT les entités HTML/XML d'un texte
+        /// </summary>
+        private string RemoveEntitiesFromText(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+                return "";
+
+            string result = text;
+
+            // Traitement complet des entités
+            result = result.Replace("&amp;apos;", "");
+            result = result.Replace("&amp;quot;", "");
+            result = result.Replace("&amp;lt;", "");
+            result = result.Replace("&amp;gt;", "");
+            result = result.Replace("&amp;nbsp;", " ");
+            result = result.Replace("&amp;amp;", "");
+            result = result.Replace("&amp;", "");
+            result = result.Replace("&apos;", "");
+            result = result.Replace("&quot;", "");
+            result = result.Replace("&lt;", "");
+            result = result.Replace("&gt;", "");
+            result = result.Replace("&nbsp;", " ");
+            result = result.Replace("&#39;", "");
+            result = result.Replace("&#34;", "");
+            result = result.Replace("&#38;", "");
+            result = result.Replace("&#60;", "");
+            result = result.Replace("&#62;", "");
+            result = result.Replace("&#160;", " ");
+            result = result.Replace("&#x27;", "");
+            result = result.Replace("&#x22;", "");
+            result = result.Replace("&#x26;", "");
+            result = result.Replace("&#x3C;", "");
+            result = result.Replace("&#x3c;", "");
+            result = result.Replace("&#x3E;", "");
+            result = result.Replace("&#x3e;", "");
+            result = result.Replace("&#xA0;", " ");
+            result = result.Replace("&#xa0;", " ");
+
+            // Regex pour capturer le reste
+            result = System.Text.RegularExpressions.Regex.Replace(result, @"&#\d+;", "");
+            result = System.Text.RegularExpressions.Regex.Replace(result, @"&#x[0-9a-fA-F]+;", "");
+            result = System.Text.RegularExpressions.Regex.Replace(result, @"&[a-zA-Z][a-zA-Z0-9]*;", "");
+
+            result = System.Text.RegularExpressions.Regex.Replace(result, @" +", " ");
+            return result.Trim();
         }
 
         /// <summary>
