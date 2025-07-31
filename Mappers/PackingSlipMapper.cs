@@ -431,12 +431,12 @@ namespace DynamicsToXmlTranslator.Mappers
         }
 
         /// <summary>
-        /// ✅ CORRIGÉ : Code Qualité selon mapping client (DISP par défaut)
+        /// ✅ CORRIGÉ : Code Qualité selon mapping client (STD par défaut)
         /// </summary>
         private string ApplyQualityCodeRuleCorrected(string? qualityCode)
         {
             if (string.IsNullOrEmpty(qualityCode))
-                return "DISP"; // ✅ CORRIGÉ : DISP par défaut selon client
+                return "STD"; // ✅ CORRIGÉ : STD par défaut selon client
 
             string cleanCode = _textProcessor.ProcessText(qualityCode).ToUpper().Trim();
 
@@ -448,7 +448,7 @@ namespace DynamicsToXmlTranslator.Mappers
                 "BLOCKED_QA1" or "BQQA1" => "BQQA1",
                 "BLOCKED_QA2" or "BQQA2" => "BQQA2",
                 "LIBERE" or "LIBRE" => "STD",
-                _ => "DISP" // ✅ CORRIGÉ : Par défaut DISP
+                _ => "STD" // ✅ CORRIGÉ : Par défaut STD
             };
         }
 
