@@ -31,10 +31,16 @@ namespace DynamicsToXmlTranslator.Services
         };
 
         // En-têtes pour le fichier OPL (CDLG_LTRF) - selon votre exemple
+        // private readonly string[] _headersOPL = new string[]
+        // {
+        //     "ACT_CODE", "OPL_RCDO", "OPL_RLDO", "ART_CODE", "OPL_QTAP", "QUA_CODE", "OPL_POIDS",
+        //     "OPL_LOT1", "OPL_LOT2", "OPL_DLOO", "OPL_NoSU", "OPL_CONDITIONNEMENT", "OPL_ALPHA1", "OPL_ALPHA2", "OPL_ALPHA3"
+        // };
+
         private readonly string[] _headersOPL = new string[]
         {
-            "ACT_CODE", "OPL_RCDO", "OPL_RLDO", "ART_CODE", "OPL_QTAP", "QUA_CODE", "OPL_POIDS",
-            "OPL_LOT1", "OPL_LOT2", "OPL_DLOO", "OPL_NoSU", "OPL_CONDITIONNEMENT", "OPL_ALPHA1", "OPL_ALPHA2", "OPL_ALPHA3"
+            "ACT_CODE", "OPL_RCDO", "OPL_RLDO", "ART_CODE", "OPL_QTAP", "QUA_CODE", "OPL_ALPHA1",
+            "OPL_LOT1", "OPL_DLC", "OPL_ALPHA3", "OPL_ALPHA4", "OPL_ALPHA5", "OPL_ALPHA6", "OPL_ALPHA7", "STATUT"
         };
 
         public PackingSlipTxtExportService(
