@@ -47,6 +47,14 @@ namespace DynamicsToXmlTranslator
         private static PackingSlipTxtExportService _packingSlipTxtExportService;
         private static PackingSlipMapper _packingSlipMapper;
 
+        //AJOUT RD 31/07/2025
+        public static string Truncate(string value, int maxLength)
+        {
+            if (string.IsNullOrEmpty(value)) return value;
+            return value.Length <= maxLength ? value : value.Substring(0, maxLength);
+        }
+        //FIN AJOUT
+
         static async Task Main(string[] args)
         {
             Console.WriteLine("=== Traducteur Dynamics vers XML WINDEV (avec UTF-8 + exclusion ART_STAT=3) ===");

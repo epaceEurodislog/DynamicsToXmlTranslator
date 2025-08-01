@@ -201,7 +201,7 @@ namespace DynamicsToXmlTranslator.Mappers
                 OPE_GRP = _textProcessor.ProcessCode(dynamics.BROrderGrouping),
                 OPE_MPCO = _textProcessor.ProcessCode(dynamics.BRPackingCode),
                 OPE_UNICODE11 = _textProcessor.ProcessName(dynamics.MessagePerso, 255),
-                OPE_TOP25 = dynamics.BRPreparationEnum,
+                OPE_TOP25 = dynamics.BRPreparationEnum.ToString(),
                 OPE_TOP28 = dynamics.BRShippingDocumentEnum.ToString(),
 
                 // ========== CHAMPS VIDES ==========
@@ -381,27 +381,45 @@ namespace DynamicsToXmlTranslator.Mappers
                 OPL_RCDO = _textProcessor.ProcessCode(dynamics.transRefId),   // CLÉ DE LIAISON ✅ CORRECT
                 OPL_RLDO = lineNumber.ToString(),                             // Numéro ligne ✅ CORRECT
                 ART_CODE = "BR" + _textProcessor.ProcessCode(dynamics.itemId), // ✅ MODIFIÉ : Préfixe "BR" ajouté
-                OPL_QTAP = dynamics.qty,                                     // Quantité ✅ CORRECT
+                OPL_QTAP = dynamics.qty,                                     // Quantité ✅ CORRECT => Mappage Exact de la table CDLG = OPL_QTOC
 
                 // ✅ CORRIGÉ : Mapping selon client
                 QUA_CODE = ApplyQualityCodeRuleCorrected(dynamics.PdsDispositionCode), // Code Qualité
 
+                //AJOUT RD 01/08/2025
+                OPL_ALPHA1 = "",
+
                 // ✅ CORRIGÉ : Mapping inversé selon client
-                OPL_LOT1 = _textProcessor.ProcessCode(dynamics.inventSerialId),   // Lot 1 = inventSerialId
-                OPL_LOT2 = _textProcessor.ProcessCode(dynamics.inventBatchId),    // Lot 2 = inventBatchId
-                OPL_DLOO = FormatDateForTxt(dynamics.expDate),                    // DLUO = expDate ✅ CORRECT
-                OPL_NoSU = _textProcessor.ProcessCode(dynamics.LicensePlateId),   // Support ✅ CORRECT
+                OPL_LOT1 = _textProcessor.ProcessCode(dynamics.inventBatchId),   // Lot 1 = inventBatchId
+
+                //MODIF ET AJOUT RD 01/08/2025
+
+                //OPL_LOT2 = _textProcessor.ProcessCode(dynamics.inventSerialId),    // Lot 2 = inventSerialId ==> TRANSFERER SUR OPL_ALPHA4
+                //OPL_DLOO = FormatDateForTxt(dynamics.expDate),                    // DLUO = expDate ✅ CORRECT ==> TRANSFERER SUR OPL_DLC
+                //OPL_NoSU = _textProcessor.ProcessCode(dynamics.LicensePlateId),   // Support ✅ CORRECT ==> TRANSFERER SUR OPL_ALPHA6
+
+                OPL_DLC = FormatDateForTxt(dynamics.expDate),                       // DLUO ==> OPL_DLOO
+                OPL_ALPHA3 = "",                                                                
+                OPL_ALPHA4 =  _textProcessor.ProcessCode(dynamics.inventSerialId),  // Lot 2 = OPL_LOT2
+                OPL_ALPHA5 = _textProcessor.ProcessCode(dynamics.LicensePlateId),   // Numero de contenant = OPL_NOSU
+                OPL_ALPHA6 = "",
+                OPL_ALPHA7 = "",
+                STATUT = "",
+
+                //PLUS NECESSAIRE
 
                 // ========== CONDITIONNEMENT ==========
-                OPL_CONDITIONNEMENT = ApplyConditionnementRule(dynamics.BRPackingCode), // ✅ CORRECT
+                //OPL_CONDITIONNEMENT = ApplyConditionnementRule(dynamics.BRPackingCode), // ✅ CORRECT
 
                 // ========== POIDS/VOLUME ==========
-                OPL_POIDS = 0, // À calculer selon vos règles métier
+                //OPL_POIDS = 0, // À calculer selon vos règles métier
 
                 // ========== CHAMPS LIBRES ==========
-                OPL_ALPHA1 = "",
-                OPL_ALPHA2 = "",
-                OPL_ALPHA3 = ""
+                //OPL_ALPHA1 = "",
+                //OPL_ALPHA2 = "",
+                //OPL_ALPHA3 = ""
+
+                //FIN DE MODIF ET AJOUT RD 01/08/2025
             };
 
             return line;

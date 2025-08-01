@@ -269,17 +269,31 @@ namespace DynamicsToXmlTranslator.Services
                 line.OPL_RCDO ?? "",                                          // OPL_RCDO
                 line.OPL_RLDO ?? "",                                          // OPL_RLDO
                 line.ART_CODE ?? "",                                          // ART_CODE
-                line.OPL_QTAP.ToString(CultureInfo.InvariantCulture),        // OPL_QTAP
+                line.OPL_QTAP.ToString(CultureInfo.InvariantCulture),         // OPL_QTOC
                 line.QUA_CODE ?? "",                                          // QUA_CODE
-                line.OPL_POIDS.ToString("0.000", CultureInfo.InvariantCulture), // OPL_POIDS
-                line.OPL_LOT1 ?? "",                                          // OPL_LOT1
-                line.OPL_LOT2 ?? "",                                          // OPL_LOT2
-                line.OPL_DLOO ?? "",                                          // OPL_DLOO
-                line.OPL_NoSU ?? "",                                          // OPL_NoSU
-                line.OPL_CONDITIONNEMENT ?? "",                              // OPL_CONDITIONNEMENT
+
+                //SUPRESSION RD 01/08/2025
+                //line.OPL_POIDS.ToString("0.000", CultureInfo.InvariantCulture), // OPL_POIDS
+                //line.OPL_LOT1 ?? "",                                          // OPL_LOT1
+                //line.OPL_LOT2 ?? "",                                          // OPL_LOT2
+                //line.OPL_DLOO ?? "",                                          // OPL_DLOO
+                //line.OPL_NoSU ?? "",                                          // OPL_NoSU
+                //line.OPL_CONDITIONNEMENT ?? "",                              // OPL_CONDITIONNEMENT
+                //line.OPL_ALPHA1 ?? "",                                        // OPL_ALPHA1
+                //line.OPL_ALPHA2 ?? "",                                        // OPL_ALPHA2
+                //line.OPL_ALPHA3 ?? ""                                         // OPL_ALPHA3
+
+                //AJOUT RD 01/08/2025
                 line.OPL_ALPHA1 ?? "",                                        // OPL_ALPHA1
-                line.OPL_ALPHA2 ?? "",                                        // OPL_ALPHA2
-                line.OPL_ALPHA3 ?? ""                                         // OPL_ALPHA3
+                line.OPL_LOT1 ?? "",                                          // OPL_LOT1
+                line.OPL_DLC ?? "",                                           // OPL_DLOO
+                line.OPL_ALPHA3 ?? "",                                        // OPL_ALPHA3
+                line.OPL_ALPHA4 ?? "",                                        // OPL_ALPHA4
+                line.OPL_ALPHA5 ?? "",                                        // OPL_ALPHA5
+                line.OPL_ALPHA6 ?? "",                                        // OPL_ALPHA6
+                line.OPL_ALPHA7 ?? "",                                        // OPL_ALPHA7
+                line.STATUT ?? ""                                             // STATUT
+
             };
 
             // Nettoyer les valeurs pour éviter les problèmes avec les séparateurs
