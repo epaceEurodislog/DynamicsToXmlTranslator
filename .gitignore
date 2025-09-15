@@ -1,0 +1,35 @@
+# Configuration avec secrets
+appsettings.json
+appsettings.*.json
+
+# Dossiers de build
+bin/
+obj/
+out/
+
+# Fichiers Visual Studio
+.vs/
+.vscode/
+*.suo
+*.user
+
+# Logs
+logs/
+*.log
+
+# Exports XML
+exports/
+*.xml
+
+# Packages
+packages/
+*.nupkg
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporaires
+*.tmp
+*.temp
+*~
