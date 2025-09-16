@@ -390,27 +390,17 @@ namespace DynamicsToXmlTranslator.Mappers
                 OPL_ALPHA1 = "",
 
                 // ✅ CORRIGÉ : Mapping inversé selon client
-<<<<<<< HEAD
-                OPL_LOT1 = _textProcessor.ProcessCode(dynamics.inventSerialId),   // Lot 1 = inventSerialId
-                                                                                  //MODIF ET AJOUT RD 01/08/2025
-=======
                 OPL_LOT1 = _textProcessor.ProcessCode(dynamics.inventBatchId),   // Lot 1 = inventBatchId
 
                 //MODIF ET AJOUT RD 01/08/2025
->>>>>>> 64d8ba17659add20872df6f622ca79ff25e05502
 
                 //OPL_LOT2 = _textProcessor.ProcessCode(dynamics.inventSerialId),    // Lot 2 = inventSerialId ==> TRANSFERER SUR OPL_ALPHA4
                 //OPL_DLOO = FormatDateForTxt(dynamics.expDate),                    // DLUO = expDate ✅ CORRECT ==> TRANSFERER SUR OPL_DLC
                 //OPL_NoSU = _textProcessor.ProcessCode(dynamics.LicensePlateId),   // Support ✅ CORRECT ==> TRANSFERER SUR OPL_ALPHA6
 
                 OPL_DLC = FormatDateForTxt(dynamics.expDate),                       // DLUO ==> OPL_DLOO
-<<<<<<< HEAD
                 OPL_ALPHA3 = "",
                 OPL_ALPHA4 = _textProcessor.ProcessCode(dynamics.inventSerialId),  // Lot 2 = OPL_LOT2
-=======
-                OPL_ALPHA3 = "",                                                                
-                OPL_ALPHA4 =  _textProcessor.ProcessCode(dynamics.inventSerialId),  // Lot 2 = OPL_LOT2
->>>>>>> 64d8ba17659add20872df6f622ca79ff25e05502
                 OPL_ALPHA5 = _textProcessor.ProcessCode(dynamics.LicensePlateId),   // Numero de contenant = OPL_NOSU
                 OPL_ALPHA6 = "",
                 OPL_ALPHA7 = "",

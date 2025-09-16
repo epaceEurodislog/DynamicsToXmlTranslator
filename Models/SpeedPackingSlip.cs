@@ -150,11 +150,6 @@ namespace DynamicsToXmlTranslator.Models
             return $"{baseValue}[{extraPart}]";
         }
 
-<<<<<<< HEAD
-
-=======
-        
->>>>>>> 64d8ba17659add20872df6f622ca79ff25e05502
         /// <summary>
         /// Représente une ligne de commande SPEED pour export TXT (fichier CDLG_COSMETIQUE)
         /// </summary>
@@ -167,11 +162,7 @@ namespace DynamicsToXmlTranslator.Models
             public string ART_CODE { get; set; } = "";                        // itemId → Référence article ✅ CORRECT
             public decimal OPL_QTAP { get; set; } = 0;                        // qty → Quantité ✅ CORRECT
             public string QUA_CODE { get; set; } = "";                        // PdsDispositionCode → Code Qualité ✅ CORRECT
-<<<<<<< HEAD
-                                                                              //public decimal OPL_POIDS { get; set; } = 0;                       // Poids/Volume ✅ CORRECT
-=======
             //public decimal OPL_POIDS { get; set; } = 0;                       // Poids/Volume ✅ CORRECT
->>>>>>> 64d8ba17659add20872df6f622ca79ff25e05502
 
             // ✅ ATTENTION : Selon mapping client, il y a une inversion par rapport aux commentaires
             //public string OPL_LOT1 { get; set; } = "";                        // inventBatchId → Lot 1 (selon mapping)
@@ -195,7 +186,6 @@ namespace DynamicsToXmlTranslator.Models
             public string STATUT { get; set; } = "";
 
             // FIN AJOUT
-
         }
 
         /// <summary>

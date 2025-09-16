@@ -277,10 +277,7 @@ namespace DynamicsToXmlTranslator.Services
                 line.ART_CODE ?? "",                                          // ART_CODE
                 line.OPL_QTAP.ToString(CultureInfo.InvariantCulture),         // OPL_QTOC
                 line.QUA_CODE ?? "",                                          // QUA_CODE
-<<<<<<< HEAD
-=======
 
->>>>>>> 64d8ba17659add20872df6f622ca79ff25e05502
                 //SUPRESSION RD 01/08/2025
                 //line.OPL_POIDS.ToString("0.000", CultureInfo.InvariantCulture), // OPL_POIDS
                 //line.OPL_LOT1 ?? "",                                          // OPL_LOT1
@@ -291,11 +288,7 @@ namespace DynamicsToXmlTranslator.Services
                 //line.OPL_ALPHA1 ?? "",                                        // OPL_ALPHA1
                 //line.OPL_ALPHA2 ?? "",                                        // OPL_ALPHA2
                 //line.OPL_ALPHA3 ?? ""                                         // OPL_ALPHA3
-<<<<<<< HEAD
- 
-=======
 
->>>>>>> 64d8ba17659add20872df6f622ca79ff25e05502
                 //AJOUT RD 01/08/2025
                 line.OPL_ALPHA1 ?? "",                                        // OPL_ALPHA1
                 line.OPL_LOT1 ?? "",                                          // OPL_LOT1
@@ -305,11 +298,7 @@ namespace DynamicsToXmlTranslator.Services
                 line.OPL_ALPHA5 ?? "",                                        // OPL_ALPHA5
                 line.OPL_ALPHA6 ?? "",                                        // OPL_ALPHA6
                 line.OPL_ALPHA7 ?? "",                                        // OPL_ALPHA7
-                line.STATUT ?? ""                                             // STATUT
-<<<<<<< HEAD
-=======
-
->>>>>>> 64d8ba17659add20872df6f622ca79ff25e05502
+                line.STATUT ?? ""
             };
 
             // Nettoyer les valeurs pour éviter les problèmes avec les séparateurs

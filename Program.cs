@@ -49,16 +49,6 @@ namespace DynamicsToXmlTranslator
 
         //AJOUT RD 31/07/2025
         public static string Truncate(string value, int maxLength)
-<<<<<<< HEAD
-=======
-        {
-            if (string.IsNullOrEmpty(value)) return value;
-            return value.Length <= maxLength ? value : value.Substring(0, maxLength);
-        }
-        //FIN AJOUT
-
-        static async Task Main(string[] args)
->>>>>>> 64d8ba17659add20872df6f622ca79ff25e05502
         {
             if (string.IsNullOrEmpty(value)) return value;
             return value.Length <= maxLength ? value : value.Substring(0, maxLength);
