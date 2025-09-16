@@ -179,8 +179,8 @@ namespace DynamicsToXmlTranslator.Mappers
             if (string.IsNullOrEmpty(category))
                 return "";
 
-            // ✅ TRAITEMENT UTF-8 : Seulement pour la compatibilité XML
-            return _textProcessor.ProcessText(category);
+            // Traitement minimal pour XML seulement (échapper les caractères XML dangereux)
+            return category.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;");
         }
 
         /// <summary>
