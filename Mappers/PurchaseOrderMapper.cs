@@ -111,10 +111,8 @@ namespace DynamicsToXmlTranslator.Mappers
 
             return cleanCode switch
             {
-                "STANDARD" or "STD" => "STD",
-                "BLOCKED_LOGISTICS" or "BQLOG" => "BQLOG",
-                "BLOCKED_QA1" or "BQQA1" => "BQQA1",
-                "BLOCKED_QA2" or "BQQA2" => "BQQA2",
+                "STANDARD" or "STD" or "RETURN_STANDARD" or "Libéré" or "Dérogé" => "STD",
+                "Bloqué" or "Recontrôle " or "En attente" => "BQQA",
                 _ => "STD"
             };
         }
