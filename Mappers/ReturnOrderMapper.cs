@@ -43,8 +43,8 @@ namespace DynamicsToXmlTranslator.Mappers
                     ReaCcli = "BR",
 
                     // ========== IDENTIFIANTS PRINCIPAUX ==========
-                    ReaRfce = _textProcessor.ProcessCode(dynamics.ReturnItemNum),
-                    ReaRfti = _textProcessor.ProcessCode(dynamics.SalesId),
+                    ReaRfce = _textProcessor.ProcessCode(dynamics.SalesId),
+                    ReaRfti = _textProcessor.ProcessCode(dynamics.ReturnItemNum),
                     ReaRfcl = dynamics.LineNum, // Même valeur que REA_NoLR
                     ReaTyat = "100", // 100 pour Return Orders
                     ReaDalp = FormatDateForXml(dynamics.ReturnDeadline),

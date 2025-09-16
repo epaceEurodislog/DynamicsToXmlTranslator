@@ -30,10 +30,10 @@ namespace DynamicsToXmlTranslator.Models
         public string ReaCcli { get; set; } = "BR"; // VALEUR FIXE
 
         [XmlElement("REA_RFCE")]
-        public string ReaRfce { get; set; } = ""; // ExpectedReceiptNumber
+        public string ReaRfce { get; set; } = ""; // TransferId (modifié)
 
         [XmlElement("REA_RFTI")]
-        public string ReaRfti { get; set; } = ""; // TransferId
+        public string ReaRfti { get; set; } = ""; // ExpectedReceiptNumber (modifié)
 
         [XmlElement("REA_RFCL")]
         public int ReaRfcl { get; set; } // Même valeur que REA_NoLR

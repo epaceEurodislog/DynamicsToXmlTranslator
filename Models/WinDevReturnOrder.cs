@@ -28,12 +28,12 @@ namespace DynamicsToXmlTranslator.Models
 
         [XmlElement("REA_CCLI")]
         public string ReaCcli { get; set; } = "BR"; // VALEUR FIXE
-
+        
         [XmlElement("REA_RFCE")]
-        public string ReaRfce { get; set; } = ""; // ReturnItemNum
+        public string ReaRfce { get; set; } = ""; // SalesId (modifié)
 
         [XmlElement("REA_RFTI")]
-        public string ReaRfti { get; set; } = ""; // SalesId
+        public string ReaRfti { get; set; } = ""; // ReturnItemNum (modifié)
 
         [XmlElement("REA_RFCL")]
         public int ReaRfcl { get; set; } // Même valeur que REA_NoLR

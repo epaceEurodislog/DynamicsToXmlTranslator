@@ -43,8 +43,8 @@ namespace DynamicsToXmlTranslator.Mappers
                     ReaCcli = "BR",
 
                     // ========== IDENTIFIANTS PRINCIPAUX ==========
-                    ReaRfce = _textProcessor.ProcessCode(dynamics.PurchOrderDocNum),
-                    ReaRfti = _textProcessor.ProcessCode(dynamics.PurchId),
+                    ReaRfce = _textProcessor.ProcessCode(dynamics.PurchId), // TransferId  
+                    ReaRfti = _textProcessor.ProcessCode(dynamics.PurchOrderDocNum), // ExpectedReceiptNumber
                     ReaRfcl = dynamics.LineNumber, // Même valeur que REA_NoLR
                     ReaTyat = "001", // 001 pour Purchase Orders
                     ReaDalp = FormatDateForXml(dynamics.ReceiptDate),
