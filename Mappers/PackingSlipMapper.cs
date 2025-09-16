@@ -234,7 +234,7 @@ namespace DynamicsToXmlTranslator.Mappers
         }
 
         /// <summary>
-        /// ✅ CORRIGÉ : RG3 avec traitement UTF-8 complet
+        /// ✅ CORRIGÉ : RG3 avec traitement UTF-8 complet + normalisation A_AFFECTER → A AFFECTER
         /// </summary>
         private string ApplyTransportCodeRuleWithUtf8(string? carrierCode)
         {
@@ -242,6 +242,10 @@ namespace DynamicsToXmlTranslator.Mappers
                 return "A AFFECTER";
 
             string cleanCode = _textProcessor.ProcessCode(carrierCode);
+
+            // ✅ NOUVEAU : Normaliser A_AFFECTER vers A AFFECTER
+            if (cleanCode.ToUpper() == "A_AFFECTER")
+                return "A AFFECTER";
 
             if (cleanCode.ToUpper() == "A AFFECTER")
                 return "A AFFECTER";
