@@ -52,6 +52,8 @@ namespace DynamicsToXmlTranslator.Mappers
                     // ========== FOURNISSEUR/CLIENT ==========
                     ReaCtaf = "BR" + _textProcessor.ProcessCode(dynamics.CustAccount),
 
+                    ReaAlpha3 = _textProcessor.ProcessCode(dynamics.SalesName),
+
                     // ========== DÉTAILS LIGNE ==========
                     ReaNoLr = dynamics.LineNum,
                     ArtCode = "BR" + _textProcessor.ProcessCode(dynamics.ItemId),
