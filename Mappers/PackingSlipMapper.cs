@@ -250,8 +250,17 @@ namespace DynamicsToXmlTranslator.Mappers
             if (cleanCode.ToUpper() == "A AFFECTER")
                 return "A AFFECTER";
 
+            // ✅ NOUVEAU : Normaliser TNT_EXPRESS vers TNT EXPRESS
+            if (cleanCode.ToUpper() == "TNT_EXPRESS")
+                return "TNT EXPRESS";
+
+            if (cleanCode.ToUpper() == "TNT EXPRESS")
+                return "TNT EXPRESS";
+
             return cleanCode;
         }
+
+
 
         /// <summary>
         /// ✅ CORRIGÉ : RG1 et RG2 avec traitement UTF-8 complet
@@ -484,9 +493,20 @@ namespace DynamicsToXmlTranslator.Mappers
 
             string cleanCode = _textProcessor.ProcessCode(carrierCode);
 
+            // ✅ NOUVEAU : Normaliser A_AFFECTER vers A AFFECTER
+            if (cleanCode.ToUpper() == "A_AFFECTER")
+                return "A AFFECTER";
+
             // Si le code est déjà "A AFFECTER", le garder tel quel
             if (cleanCode.ToUpper() == "A AFFECTER")
                 return "A AFFECTER";
+
+            // ✅ NOUVEAU : Normaliser TNT_EXPRESS vers TNT EXPRESS
+            if (cleanCode.ToUpper() == "TNT_EXPRESS")
+                return "TNT EXPRESS";
+
+            if (cleanCode.ToUpper() == "TNT EXPRESS")
+                return "TNT EXPRESS";
 
             return cleanCode;
         }
