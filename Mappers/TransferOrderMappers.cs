@@ -140,9 +140,9 @@ namespace DynamicsToXmlTranslator.Mappers
 
             return cleanCode switch
             {
-                "STANDARD" or "STD" or "RETURN_STANDARD" or "LIBÉRÉ" or "LIBERE" or "DÉROGÉ" or "DEROGE" => "STD",
-                "BLOQUÉ" or "BLOQUE" or "RECONTRÔLE" or "RECONTROLE" or "EN ATTENTE" => "BQQA",
-                _ => "STD"
+                "STANDARD" or "STD" or "RETURN_STANDARD" or "Libéré" or "Dérogé" or "LIBÉRÉ" or "LIBERE" or "DÉROGÉ" or "DEROGE" => "STD",
+                "Bloqué" or "Recontrôle " or "En attente" or "BLOQUÉ" or "BLOQUE" or "RECONTRÔLE" or "RECONTROLE" or "EN ATTENTE" => "BQQA",
+               _ => "STD"
             };
         }
 

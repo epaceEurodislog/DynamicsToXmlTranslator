@@ -79,8 +79,8 @@ namespace DynamicsToXmlTranslator.Services
                 string timeFormat = DateTime.Now.ToString("HHmmss", CultureInfo.InvariantCulture);
 
                 // Noms des fichiers
-                string headerFileName = $"CDEN_COSMETIQUE_{dateFormat}_{timeFormat}.TXT";
-                string linesFileName = $"CDLG_COSMETIQUE_{dateFormat}_{timeFormat}.TXT";
+                string headerFileName = $"CDEN_COSMETIQUE_API-IT-RCT_{dateFormat}_{timeFormat}.TXT";
+                string linesFileName = $"CDLG_COSMETIQUE_API-IT-RCT_{dateFormat}_{timeFormat}.TXT";
 
                 string headerFilePath = Path.Combine(_exportDirectory, headerFileName);
                 string linesFilePath = Path.Combine(_exportDirectory, linesFileName);

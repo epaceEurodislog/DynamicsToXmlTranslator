@@ -261,7 +261,6 @@ namespace DynamicsToXmlTranslator.Mappers
         }
 
 
-
         /// <summary>
         /// ✅ CORRIGÉ : RG1 et RG2 avec traitement UTF-8 complet
         /// </summary>

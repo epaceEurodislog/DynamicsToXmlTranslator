@@ -52,6 +52,8 @@ namespace DynamicsToXmlTranslator.Mappers
                     // ========== FOURNISSEUR ==========
                     ReaCtaf = "BR" + _textProcessor.ProcessCode(dynamics.OrderAccount),
 
+                    ReaAlpha3 = _textProcessor.ProcessCode(dynamics.PurchName),
+
                     // ========== DÉTAILS LIGNE ==========
                     ReaNoLr = dynamics.LineNumber,
                     ArtCode = "BR" + _textProcessor.ProcessCode(dynamics.ItemId),
@@ -111,11 +113,9 @@ namespace DynamicsToXmlTranslator.Mappers
 
             return cleanCode switch
             {
-                "STANDARD" or "STD" => "STD",
-                "BLOCKED_LOGISTICS" or "BQLOG" => "BQLOG",
-                "BLOCKED_QA1" or "BQQA1" => "BQQA1",
-                "BLOCKED_QA2" or "BQQA2" => "BQQA2",
-                _ => "STD"
+                "STANDARD" or "STD" or "RETURN_STANDARD" or "Libéré" or "Dérogé" or "LIBÉRÉ" or "LIBERE" or "DÉROGÉ" or "DEROGE" => "STD",
+                "Bloqué" or "Recontrôle " or "En attente" or "BLOQUÉ" or "BLOQUE" or "RECONTRÔLE" or "RECONTROLE" or "EN ATTENTE" => "BQQA",
+               _ => "STD"
             };
         }
 

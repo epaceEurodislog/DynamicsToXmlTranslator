@@ -46,6 +46,9 @@ namespace DynamicsToXmlTranslator.Models
         [XmlElement("REA_CTAF")]
         public string ReaCtaf { get; set; } = ""; // OrderAccount
 
+        [XmlElement("REA_ALPHA3")]
+        public string ReaAlpha3 { get; set; } = ""; // PurchName
+
         [XmlElement("REA_NoLR")]
         public int ReaNoLr { get; set; } = 0; // LineNumber
 
