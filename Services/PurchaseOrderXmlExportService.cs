@@ -41,7 +41,7 @@ namespace DynamicsToXmlTranslator.Services
         /// <summary>
         /// Exporte une liste de Purchase Orders WINDEV en fichier XML
         /// </summary>
-        public async Task<string?> ExportToXmlAsync(List<WinDevPurchaseOrder> purchaseOrders, List<int> originalPurchaseOrderIds = null, string fileNamePrefix = "RECAT_COSMETIQUE_PURCHASE_ORDERS_API-IT-RCT")
+        public async Task<string?> ExportToXmlAsync(List<WinDevPurchaseOrder> purchaseOrders, List<int> originalPurchaseOrderIds = null, string fileNamePrefix = FileNameConstants.PURCHASE_ORDER_PREFIX)
         {
             if (purchaseOrders == null || !purchaseOrders.Any())
             {
@@ -144,7 +144,7 @@ namespace DynamicsToXmlTranslator.Services
 
                     _logger.LogInformation($"Export du lot {batchNumber}/{batches.Count} ({batch.Count} Purchase Orders)");
 
-                    string fileNamePrefix = $"RECAT_COSMETIQUE_PURCHASE_ORDERS_API-IT-RCT_LOT{batchNumber:D3}_{baseTimestamp}";
+                    string fileNamePrefix = $"{FileNameConstants.PURCHASE_ORDER_BATCH_PREFIX}{batchNumber:D3}_{baseTimestamp}";
                     string fileName = $"{fileNamePrefix}.XML";
                     string filePath = Path.Combine(_exportDirectory, fileName);
 
@@ -313,7 +313,7 @@ namespace DynamicsToXmlTranslator.Services
         public async Task<string?> GenerateTestXmlAsync()
         {
             var testPurchaseOrders = new List<WinDevPurchaseOrder>();
-            return await ExportToXmlAsync(testPurchaseOrders, null, "RECAT_COSMETIQUE_PURCHASE_ORDERS_API-IT-RCT_TEST_VIDE");
+            return await ExportToXmlAsync(testPurchaseOrders, null, FileNameConstants.PURCHASE_ORDER_TEST_EMPTY);
         }
     }
 }

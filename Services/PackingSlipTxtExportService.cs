@@ -75,12 +75,12 @@ namespace DynamicsToXmlTranslator.Services
             try
             {
                 // PAR :
-                string dateFormat = DateTime.Now.ToString("yyyyMMdd", CultureInfo.InvariantCulture);
-                string timeFormat = DateTime.Now.ToString("HHmmss", CultureInfo.InvariantCulture);
+                string dateFormat = DateTime.Now.ToString(FileNameConstants.DATE_FORMAT, CultureInfo.InvariantCulture);
+                string timeFormat = DateTime.Now.ToString(FileNameConstants.TIME_FORMAT, CultureInfo.InvariantCulture);
 
                 // Noms des fichiers
-                string headerFileName = $"CDEN_COSMETIQUE_API-IT-RCT_{dateFormat}_{timeFormat}.TXT";
-                string linesFileName = $"CDLG_COSMETIQUE_API-IT-RCT_{dateFormat}_{timeFormat}.TXT";
+                string headerFileName = $"{FileNameConstants.PACKING_SLIP_HEADER_PREFIX}_{dateFormat}_{timeFormat}{FileNameConstants.TXT_EXTENSION}";
+                string linesFileName = $"{FileNameConstants.PACKING_SLIP_LINES_PREFIX}_{dateFormat}_{timeFormat}{FileNameConstants.TXT_EXTENSION}";
 
                 string headerFilePath = Path.Combine(_exportDirectory, headerFileName);
                 string linesFilePath = Path.Combine(_exportDirectory, linesFileName);

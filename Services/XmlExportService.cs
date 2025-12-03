@@ -39,7 +39,7 @@ namespace DynamicsToXmlTranslator.Services
         /// <summary>
         /// ✅ MODIFIÉ : Exporte une liste d'articles WINDEV en fichier XML avec log des exclusions
         /// </summary>
-        public async Task<string?> ExportToXmlAsync(List<WinDevArticle> articles, List<int> originalArticleIds = null, string fileNamePrefix = "ARTICLE_COSMETIQUE", int excludedCount = 0)
+        public async Task<string?> ExportToXmlAsync(List<WinDevArticle> articles, List<int> originalArticleIds = null, string fileNamePrefix = FileNameConstants.ARTICLE_PREFIX, int excludedCount = 0)
         {
             if (articles == null || !articles.Any())
             {
@@ -185,7 +185,7 @@ namespace DynamicsToXmlTranslator.Services
                     _logger.LogInformation($"Export du lot {batchNumber}/{batches.Count} ({batch.Count} articles)");
 
                     // Format: ARTICLE_COSMETIQUE_LOT001_YYYYMMDD_HHMMSS.XML
-                    string fileNamePrefix = $"ARTICLE_COSMETIQUE_LOT{batchNumber:D3}_{baseTimestamp}";
+                    string fileNamePrefix = $"{FileNameConstants.ARTICLE_BATCH_PREFIX}{batchNumber:D3}_{baseTimestamp}";
                     string fileName = $"{fileNamePrefix}.XML";
                     string filePath = Path.Combine(_exportDirectory, fileName);
 

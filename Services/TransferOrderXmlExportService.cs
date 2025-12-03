@@ -41,7 +41,7 @@ namespace DynamicsToXmlTranslator.Services
         /// <summary>
         /// Exporte une liste de Transfer Orders WINDEV en fichier XML
         /// </summary>
-        public async Task<string?> ExportToXmlAsync(List<WinDevTransferOrder> transferOrders, List<int>? originalTransferOrderIds = null, string fileNamePrefix = "RECAT_COSMETIQUE_TRANSFER_ORDERS_API-IT-RCT")
+        public async Task<string?> ExportToXmlAsync(List<WinDevTransferOrder> transferOrders, List<int>? originalTransferOrderIds = null, string fileNamePrefix = FileNameConstants.TRANSFER_ORDER_PREFIX)
         {
             if (transferOrders == null || !transferOrders.Any())
             {
@@ -144,7 +144,7 @@ namespace DynamicsToXmlTranslator.Services
 
                     _logger.LogInformation($"Export du lot {batchNumber}/{batches.Count} ({batch.Count} Transfer Orders)");
 
-                    string fileNamePrefix = $"RECAT_COSMETIQUE_TRANSFER_ORDERS_API-IT-RCT_LOT{batchNumber:D3}_{baseTimestamp}";
+                    string fileNamePrefix = $"{FileNameConstants.TRANSFER_ORDER_BATCH_PREFIX}{batchNumber:D3}_{baseTimestamp}";
                     string fileName = $"{fileNamePrefix}.XML";
                     string filePath = Path.Combine(_exportDirectory, fileName);
 
@@ -310,7 +310,7 @@ namespace DynamicsToXmlTranslator.Services
         public async Task<string?> GenerateTestXmlAsync()
         {
             var testTransferOrders = new List<WinDevTransferOrder>();
-            return await ExportToXmlAsync(testTransferOrders, null, "RECAT_COSMETIQUE_TRANSFER_ORDERS_API-IT-RCT_TEST_VIDE");
+            return await ExportToXmlAsync(testTransferOrders, null, FileNameConstants.TRANSFER_ORDER_TEST_EMPTY);
         }
     }
 }

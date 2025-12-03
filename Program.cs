@@ -693,7 +693,7 @@ namespace DynamicsToXmlTranslator
                 // Exporter en XML avec marquage automatique (seulement les articles traités)
                 if (winDevArticles.Count > 0)
                 {
-                    await ExportArticlesInBatches(winDevArticles, originalIds, "ARTICLE_COSMETIQUE");
+                    await ExportArticlesInBatches(winDevArticles, originalIds, FileNameConstants.ARTICLE_PREFIX);
                     Console.WriteLine($"🎯 {winDevArticles.Count} articles marqués comme exportés (UTF-8 traité, ART_STAT=3 exclus)");
                 }
 
